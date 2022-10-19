@@ -1,0 +1,14 @@
+# ignore all
+*
+
+# unignore all with extensions
+!*.*
+
+# unignore all dirs
+!*/
+
+*.o
+*.out
+
+.cache/
+compile_commands.json
