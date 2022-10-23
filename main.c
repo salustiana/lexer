@@ -1,4 +1,3 @@
-#include <ctype.h>
 #include <stdio.h>
 
 #include "lexer.h"
@@ -10,8 +9,8 @@ int main()
 
 	next_char();
 	while (look != EOF) {
-		int n = get_num();
-		printf("integer: %d\n", n);
+		int64_t n = get_int();
+		printf("integer: %ld\n", n);
 		next_char();
 	}
 }

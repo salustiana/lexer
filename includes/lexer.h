@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdint.h>
 
 extern int look;
 extern size_t line;
@@ -11,4 +12,4 @@ int next_char();
 
 int unread_char();
 
-int get_num();
+int64_t get_int();

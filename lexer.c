@@ -1,12 +1,12 @@
 #include "message.h"
 
 #include <ctype.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#define READLEN		8
-#define HISTLEN		16
-#define BUFLEN		(READLEN+HISTLEN)
+#define HALFBUF		128
+#define BUFLEN		(2*HALFBUF)
 
 int look;
 char buf[BUFLEN];
@@ -19,7 +19,7 @@ char *file_name = "stdin";
 
 void init_input_buffer()
 {
-	rb = read(STDIN_FILENO, buf, READLEN);
+	rb = read(STDIN_FILENO, buf, HALFBUF);
 	hist_start = rb;
 }
 
@@ -36,10 +36,10 @@ void next_char()
 		line_char++;
 
 	if (buf_i == hist_start) {
-		if (buf_i + READLEN > BUFLEN)
+		if (buf_i > HALFBUF)
 			rb = read(STDIN_FILENO, buf+buf_i, BUFLEN-buf_i);
 		else
-			rb = read(STDIN_FILENO, buf+buf_i, READLEN);
+			rb = read(STDIN_FILENO, buf+buf_i, HALFBUF);
 
 		if (rb < 0)
 			panic("error reading from stdin\n");
@@ -68,9 +68,15 @@ void match(char c)
 		expected("%c", c);
 }
 
-int get_num()
+// 0|-?[1-9][0-9]*
+int64_t get_int()
 {
-	int n = 0;
+	if (look == '0') {
+		next_char();
+		return 0;
+	}
+
+	int64_t n = 0;
 	int sign = 1;
 
 	if (look == '-') {
@@ -78,13 +84,8 @@ int get_num()
 		next_char();
 	}
 
-	if (!isdigit(look))
-		expected("digit");
-
-	if (look == '0') {
-		next_char();
-		return 0;
-	}
+	if (!isdigit(look) || look == '0')
+		expected("non-zero digit");
 
 	while (isdigit(look)) {
 		n = n * 10 + (look - '0');
@@ -93,3 +94,10 @@ int get_num()
 
 	return n * sign;
 }
+
+// -?(0|[1-9][0-9]*)\.[0-9]*
+/*
+char *get_float()
+{
+}
+*/
