@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define TKSTRLEN	(256 + 1)
+#define TKSTRLEN	(15 + 1)
 #define HALFBUF		TKSTRLEN
 #define BUFLEN		(2*HALFBUF)
 
@@ -89,18 +89,48 @@ enum token tk_type;
 uint64_t tk_num_val;
 char tk_str_val[TKSTRLEN];
 
-char buf[BUFLEN];
+/* FIXME: buf is an int array
+ * so that it can hold EOF once.
+ * Maybe there's a workaround.
+ */
+int buf[BUFLEN];
 ssize_t rb;
 size_t buf_i, hist_start;
 
 size_t line = 1;
 size_t line_char;
+size_t last_line_char;
+int can_unread_nl;
 char *file_name = "stdin";
 
 void init_input_buffer()
 {
 	rb = read(STDIN_FILENO, buf, HALFBUF);
-	hist_start = rb;
+}
+
+void print_buf()
+{
+	for (size_t i = 0; i < BUFLEN; i++)
+		switch (buf[i]) {
+		case '\0':
+			putchar('@');
+			break;
+		case '\n':
+			putchar('^');
+			break;
+		case EOF:
+			putchar('D');
+			break;
+		default:
+			putchar(buf[i]);
+		}
+	putchar('\n');
+	for (size_t i = 0; i < buf_i; i++)
+		putchar(' ');
+	printf("^i\n");
+	for (size_t i = 0; i < hist_start; i++)
+		putchar(' ');
+	printf("^hs\n");
 }
 
 void next_char()
@@ -110,7 +140,9 @@ void next_char()
 
 	if (look == '\n') {
 		++line;
-		line_char = 0;
+		last_line_char = line_char;
+		line_char = 1;
+		can_unread_nl = 1;
 	}
 	else
 		++line_char;
@@ -124,8 +156,8 @@ void next_char()
 		if (rb < 0)
 			panic("error reading from stdin\n");
 		if (rb == 0) {
-			look = EOF;
-			return;
+			buf[buf_i + rb] = EOF;
+			++rb;
 		}
 		hist_start = (buf_i + rb) % BUFLEN;
 	}
@@ -134,7 +166,19 @@ void next_char()
 int unread_char()
 {
 	if (buf_i == hist_start)
-		return 1;
+		panic("cannot further unread input: "
+			"no more history left in buffer");
+	if (look == '\n') {
+		--line;
+		// FIXME: maybe a better way to handle this.
+		if (!can_unread_nl)
+			panic("cannot unread two newlines without "
+					"losing line_char info");
+		line_char = last_line_char;
+		can_unread_nl = 0;
+	}
+	else
+		--line_char;
 	--buf_i;
 	buf_i %= BUFLEN;
 	return 0;
@@ -155,13 +199,17 @@ void match(char c)
 		expected("%c", c);
 }
 
-// 0|-?[1-9][0-9]*
+/* scans for an int
+ * int:	0|-?[1-9][0-9]*
+ */
 size_t get_int()
 {
 	next_char(), tk_len = 1;
 
-	if (look == '0')
+	if (look == '0') {
+		tk_type = TK_INT;
 		return tk_len;
+	}
 
 	int neg = 0;
 	if (look == '-') {
@@ -185,14 +233,15 @@ size_t get_int()
 		n = ~n + 1;
 	tk_num_val = n;
 
+	tk_type = TK_INT;
 	return tk_len;
 }
 
-void get_token()
+size_t get_token()
 {
 	if (get_int())
-		return;
-	panic("could not resolve token");
+		return tk_len;
+	return 0;
 }
 
 void print_token()
@@ -213,9 +262,12 @@ void scan_input()
 {
 	init_input_buffer();
 
-	while (look != EOF) {
-		get_token();
+	while (get_token()) {
 		print_token();
 		next_char();
+	}
+	if (look != EOF) {
+		printf("look: %d\n", look);
+		panic("syntax error");
 	}
 }
