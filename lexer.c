@@ -1,11 +1,13 @@
 #include "message.h"
 
 #include <ctype.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 
+// TODO: increase TKSTRLEN
 #define TKSTRLEN	(15 + 1)
 #define HALFBUF		TKSTRLEN
 #define BUFLEN		(2*HALFBUF)
@@ -89,11 +91,7 @@ enum token tk_type;
 uint64_t tk_num_val;
 char tk_str_val[TKSTRLEN];
 
-/* FIXME: buf is an int array
- * so that it can hold EOF once.
- * Maybe there's a workaround.
- */
-int buf[BUFLEN];
+char buf[BUFLEN];
 ssize_t rb;
 size_t buf_i, hist_start;
 
@@ -101,12 +99,8 @@ size_t line = 1;
 size_t line_char;
 size_t last_line_char;
 int can_unread_nl;
-char *file_name = "stdin";
-
-void init_input_buffer()
-{
-	rb = read(STDIN_FILENO, buf, HALFBUF);
-}
+int file_desc;
+const char *file_name;
 
 void print_buf()
 {
@@ -133,6 +127,12 @@ void print_buf()
 	printf("^hs\n");
 }
 
+void init_input_buffer()
+{
+	rb = read(file_desc, buf, HALFBUF);
+	hist_start = rb;
+}
+
 void next_char()
 {
 	look = buf[buf_i++];
@@ -149,26 +149,32 @@ void next_char()
 
 	if (buf_i == hist_start) {
 		if (buf_i > HALFBUF)
-			rb = read(STDIN_FILENO, buf+buf_i, BUFLEN-buf_i);
+			rb = read(file_desc, buf+buf_i, BUFLEN-buf_i);
 		else
-			rb = read(STDIN_FILENO, buf+buf_i, HALFBUF);
+			rb = read(file_desc, buf+buf_i, HALFBUF);
 
 		if (rb < 0)
-			panic("error reading from stdin\n");
+			panic("error reading from %s", file_name);
 		if (rb == 0) {
-			buf[buf_i + rb] = EOF;
-			++rb;
+			look = EOF;
+			return;
 		}
+
 		hist_start = (buf_i + rb) % BUFLEN;
 	}
 }
 
-int unread_char()
+void unread_char()
 {
-	if (buf_i == hist_start)
+	if (buf_i == hist_start) {
+		if (look == EOF)
+			return;
+
 		panic("cannot further unread input: "
 			"no more history left in buffer");
-	if (look == '\n') {
+	}
+
+	if (buf[buf_i] == '\n') {
 		--line;
 		// FIXME: maybe a better way to handle this.
 		if (!can_unread_nl)
@@ -179,9 +185,9 @@ int unread_char()
 	}
 	else
 		--line_char;
+
 	--buf_i;
 	buf_i %= BUFLEN;
-	return 0;
 }
 
 void roll_back()
@@ -192,11 +198,11 @@ void roll_back()
 	}
 }
 
-void match(char c)
+void skip_whitespace()
 {
-	next_char();
-	if (look != c)
-		expected("%c", c);
+	while (look == ' ' || look == '\t' || look == '\n')
+		next_char();
+	unread_char();
 }
 
 /* scans for an int
@@ -258,16 +264,23 @@ void print_token()
 	}
 }
 
-void scan_input()
+void scan_input(const char *infile)
 {
+	if (!infile) {
+		file_name = "stdin";
+		file_desc = STDIN_FILENO;
+	}
+	else {
+		file_name = infile;
+		if ((file_desc = open(file_name, O_RDONLY)) == -1)
+			panic("could not open file: %s", file_name);
+	}
+
 	init_input_buffer();
 
-	while (get_token()) {
+	while (look != EOF) {
+		get_token();
 		print_token();
-		next_char();
-	}
-	if (look != EOF) {
-		printf("look: %d\n", look);
-		panic("syntax error");
+		skip_whitespace();
 	}
 }
