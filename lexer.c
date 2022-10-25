@@ -97,8 +97,6 @@ size_t buf_i, hist_start;
 
 size_t line = 1;
 size_t line_char;
-size_t last_line_char;
-int can_unread_nl;
 int file_desc;
 const char *file_name;
 
@@ -111,9 +109,6 @@ void print_buf()
 			break;
 		case '\n':
 			putchar('^');
-			break;
-		case EOF:
-			putchar('D');
 			break;
 		default:
 			putchar(buf[i]);
@@ -140,9 +135,7 @@ void next_char()
 
 	if (look == '\n') {
 		++line;
-		last_line_char = line_char;
 		line_char = 1;
-		can_unread_nl = 1;
 	}
 	else
 		++line_char;
@@ -174,17 +167,8 @@ void unread_char()
 			"no more history left in buffer");
 	}
 
-	if (buf[buf_i] == '\n') {
-		--line;
-		// FIXME: maybe a better way to handle this.
-		if (!can_unread_nl)
-			panic("cannot unread two newlines without "
-					"losing line_char info");
-		line_char = last_line_char;
-		can_unread_nl = 0;
-	}
-	else
-		--line_char;
+	// TODO: unreading '\n' breaks line_char info
+	--line_char;
 
 	--buf_i;
 	buf_i %= BUFLEN;
@@ -200,9 +184,74 @@ void roll_back()
 
 void skip_whitespace()
 {
-	while (look == ' ' || look == '\t' || look == '\n')
+	// FIXME: a bit ugly
+	int must_unread = 0;
+	while (look == ' ' || look == '\t' || look == '\n') {
 		next_char();
-	unread_char();
+		must_unread = 1;
+	}
+	if (must_unread)
+		unread_char();
+}
+
+/* scans for a float
+ * float: -?(0|[1-9][0-9]*)\.[0-9]*
+ */
+size_t get_float()
+{
+	next_char(), tk_len = 1;
+
+	// TODO: implement atof
+	// instead of calling it
+#include <stdlib.h>
+
+	size_t str_i = 0;
+	char flt_str[TKSTRLEN];
+
+	if (look == '-') {
+		flt_str[str_i++] = look;
+		next_char(), ++tk_len;
+	}
+
+	if (look == '0') {
+		flt_str[str_i++] = look;
+		next_char(), ++tk_len;
+		if (!isdigit(look) || look == '0') {
+			roll_back();
+			return tk_len;
+		}
+	}
+
+	while (isdigit(look)) {
+		flt_str[str_i++] = look;
+		next_char(), ++tk_len;
+	}
+
+	if (look != '.') {
+		roll_back();
+		return tk_len;
+	}
+	flt_str[str_i++] = look;	/* look == '.' */
+	next_char(), ++tk_len;
+
+	if (!isdigit(look)) {
+		roll_back();
+		return tk_len;
+	}
+
+	while (isdigit(look)) {
+		flt_str[str_i++] = look;
+		next_char(), ++tk_len;
+	}
+	unread_char(), --tk_len;
+
+	// tk_num_val = atof(flt_str);
+#include <string.h>
+	double flt = atof(flt_str);
+	memcpy(&tk_num_val, &flt, 8);
+
+	tk_type = TK_FLOAT;
+	return tk_len;
 }
 
 /* scans for an int
@@ -245,9 +294,12 @@ size_t get_int()
 
 size_t get_token()
 {
+	if (get_float())
+		return tk_len;
 	if (get_int())
 		return tk_len;
-	return 0;
+
+	return tk_len;
 }
 
 void print_token()
@@ -278,9 +330,10 @@ void scan_input(const char *infile)
 
 	init_input_buffer();
 
-	while (look != EOF) {
-		get_token();
+	while (get_token()) {
 		print_token();
 		skip_whitespace();
 	}
+	if (look != EOF)
+		panic("syntax error");
 }
