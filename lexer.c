@@ -27,25 +27,8 @@ enum token {
 		TK_ID,
 
 /* PUNCTUATORS */
-		TK_LBRACK,
-		TK_RBRACK,
-		TK_LPAR,
-		TK_RPAR,
-		TK_LBRACE,
-		TK_RBRACE,
-		TK_SEMICOL,
-
-/* KEYWORDS */
-	/* control-flow */
-		TK_IF,
-		TK_ELSE,
-		TK_LOOP,
-		TK_BRK,
-		TK_CONT,
-	/* types */
-		TK_INT_T,
-		TK_UINT_T,
-		TK_FLOAT_T,
+	/* ] [ ) ( } { ; */
+		TK_PUNCT,
 
 /* OPERATORS */
 	/* general */
@@ -76,7 +59,7 @@ enum token {
 		TK_CMPL,
 		TK_BXOR,
 	/* assignment */
-		TK_AS,
+		TK_ASSIGN,
 		TK_AINC,
 		TK_ADEC,
 		TK_AMUL,
@@ -87,6 +70,25 @@ enum token {
 		TK_ABAND,
 		TK_ABXOR,
 };
+
+/* KEYWORDS
+ *
+ *	control-flow
+ *		TK_IF,
+ *		TK_ELSE,
+ *		TK_LOOP,
+ *		TK_BRK,
+ *		TK_CONT,
+ *	types
+ *		TK_INT_T,
+ *		TK_UINT_T,
+ *		TK_FLOAT_T,
+ *
+ * keywords will be scanned as identifiers,
+ * and then categorized using a lookup table
+ * (preferably with perfect hashing)
+ *
+ */
 
 size_t tk_len;
 enum token tk_type;
@@ -178,8 +180,10 @@ void unread_char()
 
 void roll_back()
 {
-	while (--tk_len > 0)
+	while (tk_len > 0) {
 		unread_char();
+		--tk_len;
+	}
 }
 
 void skip_whitespace()
@@ -188,12 +192,99 @@ void skip_whitespace()
 		next_char();
 }
 
+/* scans for an identifier
+ * identifier: [_A-Za-z][_A-Za-z0-9]*
+ */
+size_t get_id()
+{
+	tk_len = 0;
+
+	if (!isalpha(CURR_CHAR) && CURR_CHAR != '_') {
+		roll_back();
+		return tk_len;
+	}
+	size_t str_i = 0;
+	tk_str_val[str_i++] = CURR_CHAR;
+
+	ADVANCE_TK();
+	while (isalpha(CURR_CHAR) || isdigit(CURR_CHAR) || CURR_CHAR == '_') {
+		tk_str_val[str_i++] = CURR_CHAR;
+		ADVANCE_TK();
+	}
+	tk_str_val[str_i] = '\0';
+
+	tk_type = TK_ID;
+	return tk_len;
+}
+
+/* scans for a literal string
+ * str: \"[^\"\n]*\"
+ * TODO: add escaped chars to str
+ * for example: \"
+ */
+size_t get_str()
+{
+	tk_len = 0;
+
+	if (CURR_CHAR != '\"') {
+		roll_back();
+		return tk_len;
+	}
+
+	ADVANCE_TK();
+	size_t str_i = 0;
+	while (CURR_CHAR != '\"' && CURR_CHAR != '\n' && CURR_CHAR != EOF) {
+		tk_str_val[str_i++] = CURR_CHAR;
+		ADVANCE_TK();
+	}
+	tk_str_val[str_i] = '\0';
+
+	if (CURR_CHAR != '\"') {
+		roll_back();
+		return tk_len;
+	}
+	ADVANCE_TK();
+
+	tk_type = TK_STR;
+	return tk_len;
+}
+
+/* scans for a literal char
+ * char: '[^'\n]'
+ */
+size_t get_char()
+{
+	tk_len = 0;
+
+	if (CURR_CHAR != '\'') {
+		roll_back();
+		return tk_len;
+	}
+
+	ADVANCE_TK();
+	if (CURR_CHAR == '\'' || CURR_CHAR == '\n') {
+		roll_back();
+		return tk_len;
+	}
+	tk_num_val = CURR_CHAR;
+
+	ADVANCE_TK();
+	if (CURR_CHAR != '\'') {
+		roll_back();
+		return tk_len;
+	}
+	ADVANCE_TK();
+
+	tk_type = TK_CHAR;
+	return tk_len;
+}
+
 /* scans for a float
  * float: -?(0|[1-9][0-9]*)\.[0-9]*
  */
 size_t get_float()
 {
-	tk_len = 1;
+	tk_len = 0;
 
 	// TODO: implement atof
 	// instead of calling it
@@ -252,7 +343,7 @@ size_t get_float()
  */
 size_t get_int()
 {
-	tk_len = 1;
+	tk_len = 0;
 
 	if (CURR_CHAR == '0') {
 		tk_type = TK_INT;
@@ -286,6 +377,12 @@ size_t get_int()
 
 size_t get_token()
 {
+	if (get_str())
+		return tk_len;
+	if (get_char())
+		return tk_len;
+	if (get_id())
+		return tk_len;
 	if (get_float())
 		return tk_len;
 	if (get_int())
