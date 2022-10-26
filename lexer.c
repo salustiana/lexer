@@ -16,73 +16,50 @@
 #define CURR_CHAR	(buf[buf_i])
 #define ADVANCE_TK()	next_char(), ++tk_len
 
+#define RET_OP_TK(OP_TYPE, OP_VAL)	\
+do {					\
+	tk_type = (OP_TYPE);		\
+	tk_op_val = (OP_VAL);		\
+	ADVANCE_TK();			\
+	return tk_len;			\
+} while (0)
+/* the do {} while (0) avoids semicolon pitfalls */
+
 enum token {
-/* LITERALS */
-		TK_INT,
-		TK_FLOAT,
-		TK_CHAR,
-		TK_STR,
+	TK_INT,		TK_FLOAT,	TK_CHAR,
+	TK_STR,		TK_ID,		TK_PUNCT,
+	TK_OP,		TK_UN_OP,	TK_BIN_OP,
+};
 
-/* IDENTIFIERS */
-		TK_ID,
-
-/* PUNCTUATORS */
-	/* ] [ ) ( } { ; */
-		TK_PUNCT,
-
-/* OPERATORS */
-	/* general */
-		TK_ASTK,
-		TK_PRCT,
-		TK_AMP,
-	/* aritmethic */
-		TK_PLUS,
-		TK_MINUS,
-		TK_DIV,
-	/* relational */
-		TK_EQ,
-		TK_NEQ,
-		TK_GRT,
-		TK_LESS,
-		TK_GREQ,
-		TK_LEQ,
-	/* logical */
-		TK_AND,
-		TK_OR,
-		TK_NOT,
-	/* unary */
-		TK_INC,
-		TK_DEC,
-	/* bitwise */
-		TK_LSHFT,
-		TK_RSHFT,
-		TK_CMPL,
-		TK_BXOR,
-	/* assignment */
-		TK_ASSIGN,
-		TK_AINC,
-		TK_ADEC,
-		TK_AMUL,
-		TK_ADIV,
-		TK_AREM,
-		TK_ALSHFT,
-		TK_ARSHFT,
-		TK_ABAND,
-		TK_ABXOR,
+enum op {
+	OP_ASTK = '*',	OP_PRCT = '%',	OP_AMP = '&',
+	OP_PLUS = '+',	OP_MINUS = '-',	OP_DIV = '/',
+	OP_GRT = '>',	OP_LESS = '<',	OP_ASSIGN = '=',
+	OP_NOT = '!',	OP_BXOR = '^',	OP_CMPL = '~',
+	/*
+	 * it is important that '~' is the last
+	 * specified enum value, since it is the
+	 * biggest ascii char. otherwise, values in
+	 * the subsequent enum members would
+	 * overlap with the previous ones.
+	 */
+	OP_EQ,		OP_NEQ,		OP_GREQ,
+	OP_LEQ,		OP_AND,		OP_OR,
+	OP_INC,		OP_DEC,		OP_LSHFT,
+	OP_RSHFT, 	OP_AINC, 	OP_ADEC,
+	OP_AMUL,	OP_ADIV,	OP_AREM,
+	OP_ALSHFT,	OP_ARSHFT,	OP_ABAND,
+	OP_ABXOR,
 };
 
 /*
  * KEYWORDS
  *
  *	control-flow
- *		TK_IF,
- *		TK_ELSE,
- *		TK_LOOP,
- *		TK_BRK,
- *		TK_CONT,
+ *		TK_IF, TK_ELSE, TK_LOOP,
+ *		TK_BRK, TK_CONT,
  *	types
- *		TK_INT_T,
- *		TK_UINT_T,
+ *		TK_INT_T, TK_UINT_T,
  *		TK_FLOAT_T,
  *
  * keywords will be scanned as identifiers,
@@ -92,6 +69,7 @@ enum token {
 
 size_t tk_len;
 enum token tk_type;
+enum op tk_op_val;
 uint64_t tk_num_val;
 char tk_str_val[TKSTRLEN];
 
@@ -202,11 +180,8 @@ size_t get_op()
 		ADVANCE_TK();
 		if (CURR_CHAR == '>') {
 			ADVANCE_TK();
-			if (CURR_CHAR == '=') {
-				tk_type = TK_ARSHFT;
-				ADVANCE_TK();
-				return tk_len;
-			}
+			if (CURR_CHAR == '=')
+				RET_OP_TK(TK_BIN_OP, OP_ARSHFT);
 			else
 				roll_back();
 		}
@@ -217,11 +192,8 @@ size_t get_op()
 		ADVANCE_TK();
 		if (CURR_CHAR == '<') {
 			ADVANCE_TK();
-			if (CURR_CHAR == '=') {
-				tk_type = TK_ALSHFT;
-				ADVANCE_TK();
-				return tk_len;
-			}
+			if (CURR_CHAR == '=')
+				RET_OP_TK(TK_BIN_OP, OP_ALSHFT);
 			else
 				roll_back();
 		}
@@ -232,193 +204,111 @@ size_t get_op()
 	/* TWO CHAR */
 	if (CURR_CHAR == '=') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=') {
-			tk_type = TK_EQ;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_EQ);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '!') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=') {
-			tk_type = TK_NEQ;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_NEQ);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '>') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=') {
-			tk_type = TK_GREQ;
-			ADVANCE_TK();
-			return tk_len;
-		}
-		else if (CURR_CHAR == '>') {
-			tk_type = TK_RSHFT;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_GREQ);
+		else if (CURR_CHAR == '>')
+			RET_OP_TK(TK_UN_OP, OP_RSHFT);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '<') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=') {
-			tk_type = TK_LEQ;
-			ADVANCE_TK();
-			return tk_len;
-		}
-		else if (CURR_CHAR == '<') {
-			tk_type = TK_LSHFT;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_LEQ);
+		else if (CURR_CHAR == '<')
+			RET_OP_TK(TK_UN_OP, OP_LSHFT);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '&') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '&') {
-			tk_type = TK_AND;
-			ADVANCE_TK();
-			return tk_len;
-		}
-		else if (CURR_CHAR == '=') {
-			tk_type = TK_ABAND;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '&')
+			RET_OP_TK(TK_BIN_OP, OP_AND);
+		else if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_ABAND);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '|') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '|') {
-			tk_type = TK_OR;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '|')
+			RET_OP_TK(TK_BIN_OP, OP_OR);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '+') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '+') {
-			tk_type = TK_INC;
-			ADVANCE_TK();
-			return tk_len;
-		}
-		else if (CURR_CHAR == '=') {
-			tk_type = TK_AINC;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '+')
+			RET_OP_TK(TK_UN_OP, OP_INC);
+		else if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_AINC);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '-') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '-') {
-			tk_type = TK_DEC;
-			ADVANCE_TK();
-			return tk_len;
-		}
-		else if (CURR_CHAR == '=') {
-			tk_type = TK_ADEC;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '-')
+			RET_OP_TK(TK_UN_OP, OP_DEC);
+		else if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_ADEC);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '*') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=') {
-			tk_type = TK_AMUL;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_AMUL);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '/') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=') {
-			tk_type = TK_ADIV;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_ADIV);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '%') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=') {
-			tk_type = TK_AREM;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_AREM);
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '^') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=') {
-			tk_type = TK_ABXOR;
-			ADVANCE_TK();
-			return tk_len;
-		}
+		if (CURR_CHAR == '=')
+			RET_OP_TK(TK_BIN_OP, OP_ABXOR);
 		else
 			roll_back();
 	}
 
 	/* SINGLE CHAR */
 	switch (CURR_CHAR) {
-		case '*':
-			tk_type = TK_ASTK;
-			break;
-		case '%':
-			tk_type = TK_PRCT;
-			break;
-		case '&':
-			tk_type = TK_AMP;
-			break;
-		case '+':
-			tk_type = TK_PLUS;
-			break;
-		case '-':
-			tk_type = TK_MINUS;
-			break;
-		case '/':
-			tk_type = TK_DIV;
-			break;
-		case '>':
-			tk_type = TK_GRT;
-			break;
-		case '<':
-			tk_type = TK_LESS;
-			break;
-		case '!':
-			tk_type = TK_NOT;
-			break;
-		case '~':
-			tk_type = TK_CMPL;
-			break;
-		case '^':
-			tk_type = TK_BXOR;
-			break;
-		case '=':
-			tk_type = TK_ASSIGN;
-			break;
+		case '*': case '%': case '&':
+			RET_OP_TK(TK_OP, CURR_CHAR);
+		case '!': case '~':
+			RET_OP_TK(TK_UN_OP, CURR_CHAR);
+		case '+': case '-': case '/':
+		case '>': case '<': case '^': case '=':
+			RET_OP_TK(TK_BIN_OP, CURR_CHAR);
 		default:
 			return tk_len;	/* tk_len == 0 */
 	}
-	ADVANCE_TK();
-	return tk_len;
 }
 
 /*
@@ -664,6 +554,9 @@ void print_token()
 		break;
 	case TK_CHAR: case TK_PUNCT:
 		printf("%2zu  <%d, %c>\n", tk_len, tk_type, (char) tk_num_val);
+		break;
+	case TK_OP: case TK_UN_OP: case TK_BIN_OP:
+		printf("%2zu  <%d, %d>\n", tk_len, tk_type, tk_op_val);
 		break;
 	default:
 		printf("%2zu  <%d,>\n", tk_len, tk_type);
