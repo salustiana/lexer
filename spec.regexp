@@ -54,8 +54,8 @@ OPERATORS
 		inc:		\+\+
 		dec:		--
 	bitwise
-		lshft:		<<
 		rshft:		>>
+		lshft:		<<
 		cmpl:		~
 		bxor:		\^
 	assignment
@@ -65,7 +65,7 @@ OPERATORS
 		amul:		\*=
 		adiv:		\/=
 		arem:		%=
-		alsfht:		<<=
-		arsfht:		>>=
+		arshft:		>>=
+		alshft:		<<=
 		aband:		&=
 		abxor:		\^=

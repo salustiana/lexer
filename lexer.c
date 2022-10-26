@@ -65,13 +65,14 @@ enum token {
 		TK_AMUL,
 		TK_ADIV,
 		TK_AREM,
-		TK_ALSFHT,
-		TK_ARSFHT,
+		TK_ALSHFT,
+		TK_ARSHFT,
 		TK_ABAND,
 		TK_ABXOR,
 };
 
-/* KEYWORDS
+/*
+ * KEYWORDS
  *
  *	control-flow
  *		TK_IF,
@@ -87,7 +88,6 @@ enum token {
  * keywords will be scanned as identifiers,
  * and then categorized using a lookup table
  * (preferably with perfect hashing)
- *
  */
 
 size_t tk_len;
@@ -192,7 +192,261 @@ void skip_whitespace()
 		next_char();
 }
 
-/* scans for an identifier
+/* scans for an operator */
+size_t get_op()
+{
+	tk_len = 0;
+
+	/* THREE CHAR */
+	if (CURR_CHAR == '>') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '>') {
+			ADVANCE_TK();
+			if (CURR_CHAR == '=') {
+				tk_type = TK_ARSHFT;
+				ADVANCE_TK();
+				return tk_len;
+			}
+			else
+				roll_back();
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '<') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '<') {
+			ADVANCE_TK();
+			if (CURR_CHAR == '=') {
+				tk_type = TK_ALSHFT;
+				ADVANCE_TK();
+				return tk_len;
+			}
+			else
+				roll_back();
+		}
+		else
+			roll_back();
+	}
+
+	/* TWO CHAR */
+	if (CURR_CHAR == '=') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '=') {
+			tk_type = TK_EQ;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '!') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '=') {
+			tk_type = TK_NEQ;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '>') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '=') {
+			tk_type = TK_GREQ;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else if (CURR_CHAR == '>') {
+			tk_type = TK_RSHFT;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '<') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '=') {
+			tk_type = TK_LEQ;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else if (CURR_CHAR == '<') {
+			tk_type = TK_LSHFT;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '&') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '&') {
+			tk_type = TK_AND;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else if (CURR_CHAR == '=') {
+			tk_type = TK_ABAND;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '|') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '|') {
+			tk_type = TK_OR;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '+') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '+') {
+			tk_type = TK_INC;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else if (CURR_CHAR == '=') {
+			tk_type = TK_AINC;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '-') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '-') {
+			tk_type = TK_DEC;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else if (CURR_CHAR == '=') {
+			tk_type = TK_ADEC;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '*') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '=') {
+			tk_type = TK_AMUL;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '/') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '=') {
+			tk_type = TK_ADIV;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '%') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '=') {
+			tk_type = TK_AREM;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+	if (CURR_CHAR == '^') {
+		ADVANCE_TK();
+		if (CURR_CHAR == '=') {
+			tk_type = TK_ABXOR;
+			ADVANCE_TK();
+			return tk_len;
+		}
+		else
+			roll_back();
+	}
+
+	/* SINGLE CHAR */
+	switch (CURR_CHAR) {
+		case '*':
+			tk_type = TK_ASTK;
+			break;
+		case '%':
+			tk_type = TK_PRCT;
+			break;
+		case '&':
+			tk_type = TK_AMP;
+			break;
+		case '+':
+			tk_type = TK_PLUS;
+			break;
+		case '-':
+			tk_type = TK_MINUS;
+			break;
+		case '/':
+			tk_type = TK_DIV;
+			break;
+		case '>':
+			tk_type = TK_GRT;
+			break;
+		case '<':
+			tk_type = TK_LESS;
+			break;
+		case '!':
+			tk_type = TK_NOT;
+			break;
+		case '~':
+			tk_type = TK_CMPL;
+			break;
+		case '^':
+			tk_type = TK_BXOR;
+			break;
+		case '=':
+			tk_type = TK_ASSIGN;
+			break;
+		default:
+			return tk_len;	/* tk_len == 0 */
+	}
+	ADVANCE_TK();
+	return tk_len;
+}
+
+/*
+ * scans for a punctuator
+ * punctuator: \[ | \] | \( | \) | \{ | \} | ;
+ */
+size_t get_punct()
+{
+	tk_len = 0;
+
+	switch (CURR_CHAR) {
+		case '[': case ']': case '(': case ')':
+		case '{': case '}': case ';':
+			tk_num_val = CURR_CHAR;
+
+			ADVANCE_TK();
+			tk_type = TK_PUNCT;
+			return tk_len;
+
+		default:
+			return tk_len;	/* tk_len == 0 */
+	}
+
+	return tk_len;
+}
+
+/*
+ * scans for an identifier
  * identifier: [_A-Za-z][_A-Za-z0-9]*
  */
 size_t get_id()
@@ -217,7 +471,8 @@ size_t get_id()
 	return tk_len;
 }
 
-/* scans for a literal string
+/*
+ * scans for a literal string
  * str: \"[^\"\n]*\"
  * TODO: add escaped chars to str
  * for example: \"
@@ -249,7 +504,8 @@ size_t get_str()
 	return tk_len;
 }
 
-/* scans for a literal char
+/*
+ * scans for a literal char
  * char: '[^'\n]'
  */
 size_t get_char()
@@ -279,7 +535,8 @@ size_t get_char()
 	return tk_len;
 }
 
-/* scans for a float
+/*
+ * scans for a float
  * float: -?(0|[1-9][0-9]*)\.[0-9]*
  */
 size_t get_float()
@@ -338,7 +595,8 @@ size_t get_float()
 	return tk_len;
 }
 
-/* scans for an int
+/*
+ * scans for an int
  * int:	0|-?[1-9][0-9]*
  */
 size_t get_int()
@@ -387,6 +645,10 @@ size_t get_token()
 		return tk_len;
 	if (get_int())
 		return tk_len;
+	if (get_op())
+		return tk_len;
+	if (get_punct())
+		return tk_len;
 
 	return tk_len;
 }
@@ -395,13 +657,16 @@ void print_token()
 {
 	switch (tk_type) {
 	case TK_STR: case TK_ID:
-		printf("%zu\t%d(%s)\n", tk_len, tk_type, tk_str_val);
+		printf("%2zu  <%d, %s>\n", tk_len, tk_type, tk_str_val);
 		break;
-	case TK_INT: case TK_FLOAT: case TK_CHAR:
-		printf("%zu\t%d(%"PRIu64")\n", tk_len, tk_type, tk_num_val);
+	case TK_INT: case TK_FLOAT:
+		printf("%2zu  <%d, %"PRIu64">\n", tk_len, tk_type, tk_num_val);
+		break;
+	case TK_CHAR: case TK_PUNCT:
+		printf("%2zu  <%d, %c>\n", tk_len, tk_type, (char) tk_num_val);
 		break;
 	default:
-		printf("%zu\t%d\n", tk_len, tk_type);
+		printf("%2zu  <%d,>\n", tk_len, tk_type);
 	}
 }
 
