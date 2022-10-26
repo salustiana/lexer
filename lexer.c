@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 // TODO: increase TKSTRLEN
@@ -12,7 +13,8 @@
 #define HALFBUF		TKSTRLEN
 #define BUFLEN		(2*HALFBUF)
 
-int look;
+#define CURR_CHAR	(buf[buf_i])
+#define ADVANCE_TK()	next_char(), ++tk_len
 
 enum token {
 /* LITERALS */
@@ -91,7 +93,7 @@ enum token tk_type;
 uint64_t tk_num_val;
 char tk_str_val[TKSTRLEN];
 
-char buf[BUFLEN];
+signed char buf[BUFLEN];
 ssize_t rb;
 size_t buf_i, hist_start;
 
@@ -109,6 +111,9 @@ void print_buf()
 			break;
 		case '\n':
 			putchar('^');
+			break;
+		case EOF:
+			putchar('D');
 			break;
 		default:
 			putchar(buf[i]);
@@ -130,10 +135,10 @@ void init_input_buffer()
 
 void next_char()
 {
-	look = buf[buf_i++];
+	++buf_i;
 	buf_i %= BUFLEN;
 
-	if (look == '\n') {
+	if (CURR_CHAR == '\n') {
 		++line;
 		line_char = 1;
 	}
@@ -147,9 +152,10 @@ void next_char()
 			rb = read(file_desc, buf+buf_i, HALFBUF);
 
 		if (rb < 0)
-			panic("error reading from %s", file_name);
+			panic("error reading file", NULL);
 		if (rb == 0) {
-			look = EOF;
+			buf[buf_i] = EOF;
+			++rb;
 			return;
 		}
 
@@ -159,13 +165,9 @@ void next_char()
 
 void unread_char()
 {
-	if (buf_i == hist_start) {
-		if (look == EOF)
-			return;
-
+	if (buf_i == hist_start)
 		panic("cannot further unread input: "
-			"no more history left in buffer");
-	}
+			"no more history left in buffer", NULL);
 
 	// TODO: unreading '\n' breaks line_char info
 	--line_char;
@@ -176,22 +178,14 @@ void unread_char()
 
 void roll_back()
 {
-	while (tk_len > 0) {
+	while (--tk_len > 0)
 		unread_char();
-		--tk_len;
-	}
 }
 
 void skip_whitespace()
 {
-	// FIXME: a bit ugly
-	int must_unread = 0;
-	while (look == ' ' || look == '\t' || look == '\n') {
+	while (CURR_CHAR == ' ' || CURR_CHAR == '\t' || CURR_CHAR == '\n')
 		next_char();
-		must_unread = 1;
-	}
-	if (must_unread)
-		unread_char();
 }
 
 /* scans for a float
@@ -199,7 +193,7 @@ void skip_whitespace()
  */
 size_t get_float()
 {
-	next_char(), tk_len = 1;
+	tk_len = 1;
 
 	// TODO: implement atof
 	// instead of calling it
@@ -208,45 +202,44 @@ size_t get_float()
 	size_t str_i = 0;
 	char flt_str[TKSTRLEN];
 
-	if (look == '-') {
-		flt_str[str_i++] = look;
-		next_char(), ++tk_len;
+	if (CURR_CHAR == '-') {
+		flt_str[str_i++] = CURR_CHAR;
+		ADVANCE_TK();
 	}
 
-	if (look == '0') {
-		flt_str[str_i++] = look;
-		next_char(), ++tk_len;
-		if (!isdigit(look) || look == '0') {
+	if (CURR_CHAR == '0') {
+		flt_str[str_i++] = CURR_CHAR;
+		ADVANCE_TK();
+		if (!isdigit(CURR_CHAR) || CURR_CHAR == '0') {
 			roll_back();
 			return tk_len;
 		}
 	}
 
-	while (isdigit(look)) {
-		flt_str[str_i++] = look;
-		next_char(), ++tk_len;
+	while (isdigit(CURR_CHAR)) {
+		flt_str[str_i++] = CURR_CHAR;
+		ADVANCE_TK();
 	}
 
-	if (look != '.') {
+	if (CURR_CHAR != '.') {
 		roll_back();
 		return tk_len;
 	}
-	flt_str[str_i++] = look;	/* look == '.' */
-	next_char(), ++tk_len;
+	flt_str[str_i++] = CURR_CHAR;	/* look == '.' */
+	ADVANCE_TK();
 
-	if (!isdigit(look)) {
+	if (!isdigit(CURR_CHAR)) {
 		roll_back();
 		return tk_len;
 	}
 
-	while (isdigit(look)) {
-		flt_str[str_i++] = look;
-		next_char(), ++tk_len;
+	while (isdigit(CURR_CHAR)) {
+		flt_str[str_i++] = CURR_CHAR;
+		ADVANCE_TK();
 	}
-	unread_char(), --tk_len;
+	flt_str[str_i] = '\0';
 
 	// tk_num_val = atof(flt_str);
-#include <string.h>
 	double flt = atof(flt_str);
 	memcpy(&tk_num_val, &flt, 8);
 
@@ -259,30 +252,29 @@ size_t get_float()
  */
 size_t get_int()
 {
-	next_char(), tk_len = 1;
+	tk_len = 1;
 
-	if (look == '0') {
+	if (CURR_CHAR == '0') {
 		tk_type = TK_INT;
 		return tk_len;
 	}
 
 	int neg = 0;
-	if (look == '-') {
+	if (CURR_CHAR == '-') {
 		neg = 1;
-		next_char(), ++tk_len;
+		ADVANCE_TK();
 	}
 
-	if (!isdigit(look) || look == '0') {
+	if (!isdigit(CURR_CHAR) || CURR_CHAR == '0') {
 		roll_back();
 		return tk_len;
 	}
 
 	uint64_t n = 0;
-	while (isdigit(look)) {
-		n = n * 10 + (look - '0');
-		next_char(), ++tk_len;
+	while (isdigit(CURR_CHAR)) {
+		n = n * 10 + (CURR_CHAR - '0');
+		ADVANCE_TK();
 	}
-	unread_char(), --tk_len;
 
 	if (neg)
 		n = ~n + 1;
@@ -325,7 +317,7 @@ void scan_input(const char *infile)
 	else {
 		file_name = infile;
 		if ((file_desc = open(file_name, O_RDONLY)) == -1)
-			panic("could not open file: %s", file_name);
+			panic("could not open file", NULL);
 	}
 
 	init_input_buffer();
@@ -334,6 +326,6 @@ void scan_input(const char *infile)
 		print_token();
 		skip_whitespace();
 	}
-	if (look != EOF)
-		panic("syntax error");
+	if (CURR_CHAR != EOF)
+		panic("syntax error", "%c", buf[buf_i]);
 }
