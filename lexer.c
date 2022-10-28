@@ -412,12 +412,12 @@ size_t match_str()
 {
 	tk_len = 0;
 
-	if (CURR_CHAR != '\"')
+	if (CURR_CHAR != '"')
 		return tk_len;
 
 	ADVANCE_TK();
 	size_t str_i = 0;
-	while (CURR_CHAR != '\"' && CURR_CHAR != '\n' &&
+	while (CURR_CHAR != '"' && CURR_CHAR != '\n' &&
 		CURR_CHAR != '\t' && CURR_CHAR != EOF) {
 		if (CURR_CHAR == '\\') {
 			ADVANCE_TK();
@@ -442,7 +442,7 @@ size_t match_str()
 	}
 	tk_str_val[str_i] = '\0';
 
-	if (CURR_CHAR != '\"') {
+	if (CURR_CHAR != '"') {
 		roll_back();
 		return tk_len;
 	}
