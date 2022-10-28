@@ -348,6 +348,38 @@ size_t get_punct()
 }
 
 /*
+ * scans for a comment
+ * multiline: \/\*([^\*]|\*+[^\/])*\*\/
+ */
+void skip_comment()
+{
+	tk_len = 0;
+
+	if (CURR_CHAR != '/')
+		return;
+	ADVANCE_TK();
+	if (CURR_CHAR != '*') {
+		roll_back();
+		return;
+	}
+	ADVANCE_TK();
+non_astk:
+	while (CURR_CHAR != '*' && CURR_CHAR != EOF)
+		ADVANCE_TK();
+	if (CURR_CHAR == '*') {
+		ADVANCE_TK();
+		while (CURR_CHAR == '*')
+			ADVANCE_TK();
+		if (CURR_CHAR == '/') {
+			ADVANCE_TK();
+			skip_whitespace();
+			return;
+		}
+		goto non_astk;
+	}
+}
+
+/*
  * scans for an identifier
  * identifier: [_A-Za-z][_A-Za-z0-9]*
  */
@@ -355,10 +387,8 @@ size_t get_id()
 {
 	tk_len = 0;
 
-	if (!isalpha(CURR_CHAR) && CURR_CHAR != '_') {
-		roll_back();
+	if (!isalpha(CURR_CHAR) && CURR_CHAR != '_')
 		return tk_len;
-	}
 	size_t str_i = 0;
 	tk_str_val[str_i++] = CURR_CHAR;
 
@@ -381,10 +411,8 @@ size_t get_str()
 {
 	tk_len = 0;
 
-	if (CURR_CHAR != '\"') {
-		roll_back();
+	if (CURR_CHAR != '\"')
 		return tk_len;
-	}
 
 	ADVANCE_TK();
 	size_t str_i = 0;
@@ -420,10 +448,8 @@ size_t get_char()
 {
 	tk_len = 0;
 
-	if (CURR_CHAR != '\'') {
-		roll_back();
+	if (CURR_CHAR != '\'')
 		return tk_len;
-	}
 
 	ADVANCE_TK();
 	if (CURR_CHAR == '\'' || CURR_CHAR == '\n') {
@@ -543,6 +569,7 @@ size_t get_int()
 
 size_t get_token()
 {
+	skip_comment();
 	if (get_str())
 		return tk_len;
 	if (get_char())
