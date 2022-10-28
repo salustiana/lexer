@@ -87,17 +87,17 @@ void print_buf()
 {
 	for (size_t i = 0; i < BUFLEN; i++)
 		switch (buf[i]) {
-		case '\0':
-			putchar('@');
-			break;
-		case '\n':
-			putchar('^');
-			break;
-		case EOF:
-			putchar('D');
-			break;
-		default:
-			putchar(buf[i]);
+			case '\0':
+				putchar('@');
+				break;
+			case '\n':
+				putchar('^');
+				break;
+			case EOF:
+				putchar('D');
+				break;
+			default:
+				putchar(buf[i]);
 		}
 	putchar('\n');
 	for (size_t i = 0; i < buf_i; i++)
@@ -177,7 +177,8 @@ void roll_back()
 
 void skip_whitespace()
 {
-	while (CURR_CHAR == ' ' || CURR_CHAR == '\t' || CURR_CHAR == '\n')
+	while (CURR_CHAR == ' ' || CURR_CHAR == '\t' ||
+			CURR_CHAR == '\n')
 		next_char();
 }
 
@@ -392,7 +393,8 @@ size_t match_id()
 	tk_str_val[str_i++] = CURR_CHAR;
 
 	ADVANCE_TK();
-	while (isalpha(CURR_CHAR) || isdigit(CURR_CHAR) || CURR_CHAR == '_') {
+	while (isalpha(CURR_CHAR) || isdigit(CURR_CHAR) ||
+			CURR_CHAR == '_') {
 		tk_str_val[str_i++] = CURR_CHAR;
 		ADVANCE_TK();
 	}
@@ -462,7 +464,8 @@ size_t match_char()
 		return tk_len;
 	ADVANCE_TK();
 
-	if (CURR_CHAR == '\'' || CURR_CHAR == '\n' || CURR_CHAR == '\t') {
+	if (CURR_CHAR == '\'' || CURR_CHAR == '\n' ||
+			CURR_CHAR == '\t') {
 		roll_back();
 		return tk_len;
 	}
