@@ -183,7 +183,7 @@ void skip_whitespace()
 }
 
 /* scans for an operator */
-size_t get_op()
+size_t match_op()
 {
 	tk_len = 0;
 
@@ -327,7 +327,7 @@ size_t get_op()
  * scans for a punctuator
  * punctuator: \[ | \] | \( | \) | \{ | \} | ;
  */
-size_t get_punct()
+size_t match_punct()
 {
 	tk_len = 0;
 
@@ -351,16 +351,16 @@ size_t get_punct()
  * scans for a comment
  * multiline: \/\*([^\*]|\*+[^\/])*\*\/
  */
-void skip_comment()
+size_t match_comment()
 {
 	tk_len = 0;
 
 	if (CURR_CHAR != '/')
-		return;
+		return tk_len;
 	ADVANCE_TK();
 	if (CURR_CHAR != '*') {
 		roll_back();
-		return;
+		return tk_len;
 	}
 	ADVANCE_TK();
 non_astk:
@@ -372,18 +372,18 @@ non_astk:
 			ADVANCE_TK();
 		if (CURR_CHAR == '/') {
 			ADVANCE_TK();
-			skip_whitespace();
-			return;
+			return tk_len;
 		}
 		goto non_astk;
 	}
+	return tk_len;
 }
 
 /*
  * scans for an identifier
  * identifier: [_A-Za-z][_A-Za-z0-9]*
  */
-size_t get_id()
+size_t match_id()
 {
 	tk_len = 0;
 
@@ -407,7 +407,7 @@ size_t get_id()
  * scans for a literal string
  * str:	\"([^\"\n]|\\[\"nt])*\"
  */
-size_t get_str()
+size_t match_str()
 {
 	tk_len = 0;
 
@@ -444,7 +444,7 @@ size_t get_str()
  * scans for a literal char
  * char: '[^'\n]'
  */
-size_t get_char()
+size_t match_char()
 {
 	tk_len = 0;
 
@@ -473,7 +473,7 @@ size_t get_char()
  * scans for a float
  * float: -?(0|[1-9][0-9]*)\.[0-9]*
  */
-size_t get_float()
+size_t match_float()
 {
 	tk_len = 0;
 
@@ -533,7 +533,7 @@ size_t get_float()
  * scans for an int
  * int:	0|-?[1-9][0-9]*
  */
-size_t get_int()
+size_t match_int()
 {
 	tk_len = 0;
 
@@ -569,20 +569,21 @@ size_t get_int()
 
 size_t get_token()
 {
-	skip_comment();
-	if (get_str())
+	if (match_comment())
+		skip_whitespace();
+	if (match_str())
 		return tk_len;
-	if (get_char())
+	if (match_char())
 		return tk_len;
-	if (get_id())
+	if (match_id())
 		return tk_len;
-	if (get_float())
+	if (match_float())
 		return tk_len;
-	if (get_int())
+	if (match_int())
 		return tk_len;
-	if (get_op())
+	if (match_op())
 		return tk_len;
-	if (get_punct())
+	if (match_punct())
 		return tk_len;
 
 	return tk_len;
