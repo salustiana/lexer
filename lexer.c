@@ -78,7 +78,9 @@ ssize_t rb;
 size_t buf_i, hist_start;
 
 size_t line = 1;
-size_t line_char;
+size_t line_char = 1;
+size_t last_line_char;
+int can_unread_line;
 int file_desc;
 const char *file_name;
 
@@ -120,7 +122,9 @@ void next_char()
 
 	if (CURR_CHAR == '\n') {
 		++line;
-		line_char = 1;
+		last_line_char = line_char;
+		line_char = 0;
+		can_unread_line = 1;
 	}
 	else
 		++line_char;
@@ -149,8 +153,16 @@ void unread_char()
 		panic("cannot further unread input: "
 			"no more history left in buffer", NULL);
 
-	// TODO: unreading '\n' breaks line_char info
-	--line_char;
+	if (CURR_CHAR == '\n') {
+		if (!can_unread_line)
+			panic("cannot unread newline without "
+				"losing line_char info", NULL);
+		--line;
+		line_char = last_line_char;
+		can_unread_line = 0;
+	}
+	else
+		--line_char;
 
 	--buf_i;
 	buf_i %= BUFLEN;
