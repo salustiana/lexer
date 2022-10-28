@@ -8,8 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
-// TODO: increase TKSTRLEN
-#define TKSTRLEN	(15 + 1)
+#define TKSTRLEN	(127 + 1)
 #define HALFBUF		TKSTRLEN
 #define BUFLEN		(2*HALFBUF)
 
@@ -117,9 +116,6 @@ void init_input_buffer()
 
 void next_char()
 {
-	++buf_i;
-	buf_i %= BUFLEN;
-
 	if (CURR_CHAR == '\n') {
 		++line;
 		last_line_char = line_char;
@@ -128,6 +124,9 @@ void next_char()
 	}
 	else
 		++line_char;
+
+	++buf_i;
+	buf_i %= BUFLEN;
 
 	if (buf_i == hist_start) {
 		if (buf_i > HALFBUF)
@@ -153,6 +152,9 @@ void unread_char()
 		panic("cannot further unread input: "
 			"no more history left in buffer", NULL);
 
+	--buf_i;
+	buf_i %= BUFLEN;
+
 	if (CURR_CHAR == '\n') {
 		if (!can_unread_line)
 			panic("cannot unread newline without "
@@ -163,9 +165,6 @@ void unread_char()
 	}
 	else
 		--line_char;
-
-	--buf_i;
-	buf_i %= BUFLEN;
 }
 
 void roll_back()
@@ -325,7 +324,7 @@ size_t match_op()
 
 /*
  * scans for a punctuator
- * punctuator: \[ | \] | \( | \) | \{ | \} | ;
+ * punctuator: \[ | \] | \( | \) | \{ | \} | , | ;
  */
 size_t match_punct()
 {
@@ -333,7 +332,7 @@ size_t match_punct()
 
 	switch (CURR_CHAR) {
 		case '[': case ']': case '(': case ')':
-		case '{': case '}': case ';':
+		case '{': case '}': case ',': case ';':
 			tk_num_val = CURR_CHAR;
 
 			ADVANCE_TK();
@@ -444,6 +443,7 @@ size_t match_str()
  * scans for a literal char
  * char: '[^'\n]'
  */
+// TODO: add escape sequences
 size_t match_char()
 {
 	tk_len = 0;
@@ -489,13 +489,15 @@ size_t match_float()
 		ADVANCE_TK();
 	}
 
+	if (!isdigit(CURR_CHAR)) {
+		roll_back();
+		return tk_len;
+	}
+
 	if (CURR_CHAR == '0') {
 		flt_str[str_i++] = CURR_CHAR;
 		ADVANCE_TK();
-		if (!isdigit(CURR_CHAR) || CURR_CHAR == '0') {
-			roll_back();
-			return tk_len;
-		}
+		goto match_fract;
 	}
 
 	while (isdigit(CURR_CHAR)) {
@@ -503,6 +505,7 @@ size_t match_float()
 		ADVANCE_TK();
 	}
 
+match_fract:
 	if (CURR_CHAR != '.') {
 		roll_back();
 		return tk_len;
@@ -539,6 +542,7 @@ size_t match_int()
 
 	if (CURR_CHAR == '0') {
 		tk_type = TK_INT;
+		ADVANCE_TK();
 		return tk_len;
 	}
 

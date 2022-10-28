@@ -16,6 +16,7 @@ PUNCTUATORS
 		rpar:		\)
 		lbrace:		\{
 		rbrace:		\}
+		comma:		,
 		semicol:	;
 
 KEYWORDS
