@@ -3,8 +3,8 @@ COMMENTS
 LITERALS
 		int:		0|-?[1-9][0-9]*
 		float:		-?(0|[1-9][0-9]*)\.[0-9]*
-		char:		'[^'\n]'
-		str:		\"([^\"\n]|\\[\"nt])*\"
+		char:		'([^'\n\t]|\\['nt])'
+		str:		\"([^\"\n\t]|\\[\"nt])*\"
 
 IDENTIFIERS
 		identifier:	[_A-Za-z][_A-Za-z0-9]*

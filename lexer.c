@@ -404,7 +404,7 @@ size_t match_id()
 
 /*
  * scans for a literal string
- * str:	\"([^\"\n]|\\[\"nt])*\"
+ * str:	\"([^\"\n\t]|\\[\"nt])*\"
  */
 size_t match_str()
 {
@@ -415,16 +415,27 @@ size_t match_str()
 
 	ADVANCE_TK();
 	size_t str_i = 0;
-	while (CURR_CHAR != '\"' && CURR_CHAR != '\n' && CURR_CHAR != EOF) {
-		tk_str_val[str_i++] = CURR_CHAR;
+	while (CURR_CHAR != '\"' && CURR_CHAR != '\n' &&
+		CURR_CHAR != '\t' && CURR_CHAR != EOF) {
 		if (CURR_CHAR == '\\') {
 			ADVANCE_TK();
-			if (CURR_CHAR != '"' && CURR_CHAR != 'n' && CURR_CHAR != 't') {
-				roll_back();
-				return tk_len;
+			switch (CURR_CHAR) {
+				case '"':
+					tk_str_val[str_i++] = '"';
+					break;
+				case 'n':
+					tk_str_val[str_i++] = '\n';
+					break;
+				case 't':
+					tk_str_val[str_i++] = '\t';
+					break;
+				default:
+					roll_back();
+					return tk_len;
 			}
-			tk_str_val[str_i++] = CURR_CHAR;
 		}
+		else
+			tk_str_val[str_i++] = CURR_CHAR;
 		ADVANCE_TK();
 	}
 	tk_str_val[str_i] = '\0';
@@ -441,24 +452,44 @@ size_t match_str()
 
 /*
  * scans for a literal char
- * char: '[^'\n]'
+ * char: '([^'\n\t]|\\['\\nt])'
  */
-// TODO: add escape sequences
 size_t match_char()
 {
 	tk_len = 0;
 
 	if (CURR_CHAR != '\'')
 		return tk_len;
-
 	ADVANCE_TK();
-	if (CURR_CHAR == '\'' || CURR_CHAR == '\n') {
+
+	if (CURR_CHAR == '\'' || CURR_CHAR == '\n' || CURR_CHAR == '\t') {
 		roll_back();
 		return tk_len;
 	}
-	tk_num_val = CURR_CHAR;
-
+	if (CURR_CHAR == '\\') {
+		ADVANCE_TK();
+		switch (CURR_CHAR) {
+			case '\\':
+				tk_num_val = '\\';
+				break;
+			case '\'':
+				tk_num_val = '\'';
+				break;
+			case 'n':
+				tk_num_val = '\n';
+				break;
+			case 't':
+				tk_num_val = '\t';
+				break;
+			default:
+				roll_back();
+				return tk_len;
+		}
+	}
+	else
+		tk_num_val = CURR_CHAR;
 	ADVANCE_TK();
+
 	if (CURR_CHAR != '\'') {
 		roll_back();
 		return tk_len;
