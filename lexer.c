@@ -119,7 +119,7 @@ void next_char()
 	if (CURR_CHAR == '\n') {
 		++line;
 		last_line_char = line_char;
-		line_char = 0;
+		line_char = 1;
 		can_unread_line = 1;
 	}
 	else
