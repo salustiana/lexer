@@ -23,7 +23,7 @@ do {					\
 	ADVANCE_TK();			\
 	return tk_len;			\
 } while (0)
-/* the do {} while (0) avoids semicolon pitfalls */
+/* the do {} while (0) prevents semicolon pitfalls */
 
 enum token {
 	TK_INT,		TK_FLOAT,	TK_CHAR,
@@ -37,7 +37,7 @@ enum op {
 	OP_GRT = '>',	OP_LESS = '<',	OP_ASSIGN = '=',
 	OP_NOT = '!',	OP_BXOR = '^',	OP_CMPL = '~',
 	/*
-	 * it is important that '~' is the last
+	 * it is important for '~' to be the last
 	 * specified enum value, since it is the
 	 * biggest ascii char. otherwise, values in
 	 * the subsequent enum members would
@@ -363,9 +363,7 @@ size_t get_id()
 
 /*
  * scans for a literal string
- * str: \"[^\"\n]*\"
- * TODO: add escaped chars to str
- * for example: \"
+ * str:	\"([^\"\n]|\\[\"nt])*\"
  */
 size_t get_str()
 {
@@ -380,6 +378,14 @@ size_t get_str()
 	size_t str_i = 0;
 	while (CURR_CHAR != '\"' && CURR_CHAR != '\n' && CURR_CHAR != EOF) {
 		tk_str_val[str_i++] = CURR_CHAR;
+		if (CURR_CHAR == '\\') {
+			ADVANCE_TK();
+			if (CURR_CHAR != '"' && CURR_CHAR != 'n' && CURR_CHAR != 't') {
+				roll_back();
+				return tk_len;
+			}
+			tk_str_val[str_i++] = CURR_CHAR;
+		}
 		ADVANCE_TK();
 	}
 	tk_str_val[str_i] = '\0';
@@ -582,5 +588,5 @@ void scan_input(const char *infile)
 		skip_whitespace();
 	}
 	if (CURR_CHAR != EOF)
-		panic("syntax error", "%c", buf[buf_i]);
+		panic("syntax error", "%c", CURR_CHAR);
 }
