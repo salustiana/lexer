@@ -111,7 +111,9 @@ void print_buf()
 void init_input_buffer()
 {
 	rb = read(file_desc, buf, HALFBUF);
-	hist_start = rb;
+	if (rb < 0)
+		panic("error reading file", NULL);
+	hist_start = (size_t) rb;
 }
 
 void next_char()
@@ -142,7 +144,7 @@ void next_char()
 			return;
 		}
 
-		hist_start = (buf_i + rb) % BUFLEN;
+		hist_start = (buf_i + (size_t) rb) % BUFLEN;
 	}
 }
 
@@ -334,7 +336,7 @@ size_t match_punct()
 	switch (CURR_CHAR) {
 		case '[': case ']': case '(': case ')':
 		case '{': case '}': case ',': case ';':
-			tk_num_val = CURR_CHAR;
+			tk_num_val = (uint64_t) CURR_CHAR;
 
 			ADVANCE_TK();
 			tk_type = TK_PUNCT;
@@ -490,7 +492,7 @@ size_t match_char()
 		}
 	}
 	else
-		tk_num_val = CURR_CHAR;
+		tk_num_val = (uint64_t) CURR_CHAR;
 	ADVANCE_TK();
 
 	if (CURR_CHAR != '\'') {
@@ -593,7 +595,7 @@ size_t match_int()
 
 	uint64_t n = 0;
 	while (isdigit(CURR_CHAR)) {
-		n = n * 10 + (CURR_CHAR - '0');
+		n = n * 10 + ((uint64_t) CURR_CHAR - '0');
 		ADVANCE_TK();
 	}
 
