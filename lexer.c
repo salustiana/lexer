@@ -314,12 +314,12 @@ size_t match_op()
 	/* SINGLE CHAR */
 	switch (CURR_CHAR) {
 		case '*': case '%': case '&':
-			RET_OP_TK(TK_OP, CURR_CHAR);
+			RET_OP_TK(TK_OP, (enum op) CURR_CHAR);
 		case '!': case '~':
-			RET_OP_TK(TK_UN_OP, CURR_CHAR);
+			RET_OP_TK(TK_UN_OP, (enum op) CURR_CHAR);
 		case '+': case '-': case '/':
 		case '>': case '<': case '^': case '=':
-			RET_OP_TK(TK_BIN_OP, CURR_CHAR);
+			RET_OP_TK(TK_BIN_OP, (enum op) CURR_CHAR);
 		default:
 			return tk_len;	/* tk_len == 0 */
 	}
