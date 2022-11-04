@@ -1,3 +1,4 @@
+#include "lexer.h"
 #include "message.h"
 
 #include <ctype.h>
@@ -8,69 +9,20 @@
 #include <string.h>
 #include <unistd.h>
 
-#define TKSTRLEN	(127 + 1)
 #define HALFBUF		TKSTRLEN
 #define BUFLEN		(2*HALFBUF)
 
 #define CURR_CHAR	(buf[buf_i])
-#define ADVANCE_TK()	next_char(), ++tk_len
+#define ADVANCE_TK()	next_char(), ++curr_tk.len
 
 #define RET_OP_TK(OP_TYPE, OP_VAL)	\
 do {					\
-	tk_type = (OP_TYPE);		\
-	tk_op_val = (OP_VAL);		\
+	curr_tk.type = (OP_TYPE);	\
+	curr_tk.op_val = (OP_VAL);	\
 	ADVANCE_TK();			\
-	return tk_len;			\
+	return curr_tk.len;		\
 } while (0)
 /* the do {} while (0) prevents semicolon pitfalls */
-
-enum token {
-	TK_INT,		TK_FLOAT,	TK_CHAR,
-	TK_STR,		TK_ID,		TK_PUNCT,
-	TK_OP,		TK_UN_OP,	TK_BIN_OP,
-};
-
-enum op {
-	OP_ASTK = '*',	OP_PRCT = '%',	OP_AMP = '&',
-	OP_PLUS = '+',	OP_MINUS = '-',	OP_DIV = '/',
-	OP_GRT = '>',	OP_LESS = '<',	OP_ASSIGN = '=',
-	OP_NOT = '!',	OP_BXOR = '^',	OP_CMPL = '~',
-	/*
-	 * it is important for '~' to be the last
-	 * specified enum value, since it is the
-	 * biggest ascii char. otherwise, values in
-	 * the subsequent enum members would
-	 * overlap with the previous ones.
-	 */
-	OP_EQ,		OP_NEQ,		OP_GREQ,
-	OP_LEQ,		OP_AND,		OP_OR,
-	OP_INC,		OP_DEC,		OP_LSHFT,
-	OP_RSHFT, 	OP_AINC, 	OP_ADEC,
-	OP_AMUL,	OP_ADIV,	OP_AREM,
-	OP_ALSHFT,	OP_ARSHFT,	OP_ABAND,
-	OP_ABXOR,
-};
-
-/*
- * KEYWORDS
- *
- *	control-flow
- *		TK_IF, TK_ELSE, TK_LOOP,
- *		TK_BRK, TK_CONT,
- *	types
- *		TK_INT_T, TK_UINT_T,
- *		TK_FLOAT_T,
- *
- * keywords will be scanned as identifiers,
- * and then categorized using a lookup table
- * (preferably with perfect hashing)
- */
-
-size_t tk_len;
-enum token tk_type;
-enum op tk_op_val;
-uint64_t tk_num_val;
-char tk_str_val[TKSTRLEN];
 
 signed char buf[BUFLEN];
 ssize_t rb;
@@ -82,6 +34,8 @@ size_t last_line_char;
 int can_unread_line;
 int file_desc;
 const char *file_name;
+
+struct token curr_tk;
 
 void print_buf()
 {
@@ -171,9 +125,9 @@ void unread_char()
 
 void roll_back()
 {
-	while (tk_len > 0) {
+	while (curr_tk.len > 0) {
 		unread_char();
-		--tk_len;
+		--curr_tk.len;
 	}
 }
 
@@ -187,7 +141,7 @@ void skip_whitespace()
 /* scans for an operator */
 size_t match_op()
 {
-	tk_len = 0;
+	curr_tk.len = 0;
 
 	/* THREE CHAR */
 	if (CURR_CHAR == '>') {
@@ -314,14 +268,14 @@ size_t match_op()
 	/* SINGLE CHAR */
 	switch (CURR_CHAR) {
 		case '*': case '%': case '&':
-			RET_OP_TK(TK_OP, (enum op) CURR_CHAR);
+			RET_OP_TK(TK_OP, (enum tk_op_val) CURR_CHAR);
 		case '!': case '~':
-			RET_OP_TK(TK_UN_OP, (enum op) CURR_CHAR);
+			RET_OP_TK(TK_UN_OP, (enum tk_op_val) CURR_CHAR);
 		case '+': case '-': case '/':
 		case '>': case '<': case '^': case '=':
-			RET_OP_TK(TK_BIN_OP, (enum op) CURR_CHAR);
+			RET_OP_TK(TK_BIN_OP, (enum tk_op_val) CURR_CHAR);
 		default:
-			return tk_len;	/* tk_len == 0 */
+			return curr_tk.len;	/* curr_tk.len == 0 */
 	}
 }
 
@@ -331,22 +285,22 @@ size_t match_op()
  */
 size_t match_punct()
 {
-	tk_len = 0;
+	curr_tk.len = 0;
 
 	switch (CURR_CHAR) {
 		case '[': case ']': case '(': case ')':
 		case '{': case '}': case ',': case ';':
-			tk_num_val = (uint64_t) CURR_CHAR;
+			curr_tk.num_val = (uint64_t) CURR_CHAR;
 
 			ADVANCE_TK();
-			tk_type = TK_PUNCT;
-			return tk_len;
+			curr_tk.type = TK_PUNCT;
+			return curr_tk.len;
 
 		default:
-			return tk_len;	/* tk_len == 0 */
+			return curr_tk.len;	/* curr_tk.len == 0 */
 	}
 
-	return tk_len;
+	return curr_tk.len;
 }
 
 /*
@@ -355,14 +309,14 @@ size_t match_punct()
  */
 size_t match_comment()
 {
-	tk_len = 0;
+	curr_tk.len = 0;
 
 	if (CURR_CHAR != '/')
-		return tk_len;
+		return curr_tk.len;
 	ADVANCE_TK();
 	if (CURR_CHAR != '*') {
 		roll_back();
-		return tk_len;
+		return curr_tk.len;
 	}
 	ADVANCE_TK();
 non_astk:
@@ -374,11 +328,11 @@ non_astk:
 			ADVANCE_TK();
 		if (CURR_CHAR == '/') {
 			ADVANCE_TK();
-			return tk_len;
+			return curr_tk.len;
 		}
 		goto non_astk;
 	}
-	return tk_len;
+	return curr_tk.len;
 }
 
 /*
@@ -387,23 +341,23 @@ non_astk:
  */
 size_t match_id()
 {
-	tk_len = 0;
+	curr_tk.len = 0;
 
 	if (!isalpha(CURR_CHAR) && CURR_CHAR != '_')
-		return tk_len;
+		return curr_tk.len;
 	size_t str_i = 0;
-	tk_str_val[str_i++] = CURR_CHAR;
+	curr_tk.str_val[str_i++] = CURR_CHAR;
 
 	ADVANCE_TK();
 	while (isalpha(CURR_CHAR) || isdigit(CURR_CHAR) ||
 			CURR_CHAR == '_') {
-		tk_str_val[str_i++] = CURR_CHAR;
+		curr_tk.str_val[str_i++] = CURR_CHAR;
 		ADVANCE_TK();
 	}
-	tk_str_val[str_i] = '\0';
+	curr_tk.str_val[str_i] = '\0';
 
-	tk_type = TK_ID;
-	return tk_len;
+	curr_tk.type = TK_ID;
+	return curr_tk.len;
 }
 
 /*
@@ -412,10 +366,10 @@ size_t match_id()
  */
 size_t match_str()
 {
-	tk_len = 0;
+	curr_tk.len = 0;
 
 	if (CURR_CHAR != '"')
-		return tk_len;
+		return curr_tk.len;
 
 	ADVANCE_TK();
 	size_t str_i = 0;
@@ -425,33 +379,33 @@ size_t match_str()
 			ADVANCE_TK();
 			switch (CURR_CHAR) {
 				case '"':
-					tk_str_val[str_i++] = '"';
+					curr_tk.str_val[str_i++] = '"';
 					break;
 				case 'n':
-					tk_str_val[str_i++] = '\n';
+					curr_tk.str_val[str_i++] = '\n';
 					break;
 				case 't':
-					tk_str_val[str_i++] = '\t';
+					curr_tk.str_val[str_i++] = '\t';
 					break;
 				default:
 					roll_back();
-					return tk_len;
+					return curr_tk.len;
 			}
 		}
 		else
-			tk_str_val[str_i++] = CURR_CHAR;
+			curr_tk.str_val[str_i++] = CURR_CHAR;
 		ADVANCE_TK();
 	}
-	tk_str_val[str_i] = '\0';
+	curr_tk.str_val[str_i] = '\0';
 
 	if (CURR_CHAR != '"') {
 		roll_back();
-		return tk_len;
+		return curr_tk.len;
 	}
 	ADVANCE_TK();
 
-	tk_type = TK_STR;
-	return tk_len;
+	curr_tk.type = TK_STR;
+	return curr_tk.len;
 }
 
 /*
@@ -460,49 +414,49 @@ size_t match_str()
  */
 size_t match_char()
 {
-	tk_len = 0;
+	curr_tk.len = 0;
 
 	if (CURR_CHAR != '\'')
-		return tk_len;
+		return curr_tk.len;
 	ADVANCE_TK();
 
 	if (CURR_CHAR == '\'' || CURR_CHAR == '\n' ||
 			CURR_CHAR == '\t') {
 		roll_back();
-		return tk_len;
+		return curr_tk.len;
 	}
 	if (CURR_CHAR == '\\') {
 		ADVANCE_TK();
 		switch (CURR_CHAR) {
 			case '\\':
-				tk_num_val = '\\';
+				curr_tk.num_val = '\\';
 				break;
 			case '\'':
-				tk_num_val = '\'';
+				curr_tk.num_val = '\'';
 				break;
 			case 'n':
-				tk_num_val = '\n';
+				curr_tk.num_val = '\n';
 				break;
 			case 't':
-				tk_num_val = '\t';
+				curr_tk.num_val = '\t';
 				break;
 			default:
 				roll_back();
-				return tk_len;
+				return curr_tk.len;
 		}
 	}
 	else
-		tk_num_val = (uint64_t) CURR_CHAR;
+		curr_tk.num_val = (uint64_t) CURR_CHAR;
 	ADVANCE_TK();
 
 	if (CURR_CHAR != '\'') {
 		roll_back();
-		return tk_len;
+		return curr_tk.len;
 	}
 	ADVANCE_TK();
 
-	tk_type = TK_CHAR;
-	return tk_len;
+	curr_tk.type = TK_CHAR;
+	return curr_tk.len;
 }
 
 /*
@@ -511,7 +465,7 @@ size_t match_char()
  */
 size_t match_float()
 {
-	tk_len = 0;
+	curr_tk.len = 0;
 
 	// TODO: implement atof
 	// instead of calling it
@@ -527,7 +481,7 @@ size_t match_float()
 
 	if (!isdigit(CURR_CHAR)) {
 		roll_back();
-		return tk_len;
+		return curr_tk.len;
 	}
 
 	if (CURR_CHAR == '0') {
@@ -544,14 +498,14 @@ size_t match_float()
 match_fract:
 	if (CURR_CHAR != '.') {
 		roll_back();
-		return tk_len;
+		return curr_tk.len;
 	}
-	flt_str[str_i++] = CURR_CHAR;	/* look == '.' */
+	flt_str[str_i++] = CURR_CHAR;	/* CURR_CHAR == '.' */
 	ADVANCE_TK();
 
 	if (!isdigit(CURR_CHAR)) {
 		roll_back();
-		return tk_len;
+		return curr_tk.len;
 	}
 
 	while (isdigit(CURR_CHAR)) {
@@ -560,12 +514,12 @@ match_fract:
 	}
 	flt_str[str_i] = '\0';
 
-	// tk_num_val = atof(flt_str);
+	// curr_tk.num_val = atof(flt_str);
 	double flt = atof(flt_str);
-	memcpy(&tk_num_val, &flt, 8);
+	memcpy(&curr_tk.num_val, &flt, 8);
 
-	tk_type = TK_FLOAT;
-	return tk_len;
+	curr_tk.type = TK_FLOAT;
+	return curr_tk.len;
 }
 
 /*
@@ -574,12 +528,12 @@ match_fract:
  */
 size_t match_int()
 {
-	tk_len = 0;
+	curr_tk.len = 0;
 
 	if (CURR_CHAR == '0') {
-		tk_type = TK_INT;
+		curr_tk.type = TK_INT;
 		ADVANCE_TK();
-		return tk_len;
+		return curr_tk.len;
 	}
 
 	int neg = 0;
@@ -590,7 +544,7 @@ size_t match_int()
 
 	if (!isdigit(CURR_CHAR) || CURR_CHAR == '0') {
 		roll_back();
-		return tk_len;
+		return curr_tk.len;
 	}
 
 	uint64_t n = 0;
@@ -601,10 +555,10 @@ size_t match_int()
 
 	if (neg)
 		n = ~n + 1;
-	tk_num_val = n;
+	curr_tk.num_val = n;
 
-	tk_type = TK_INT;
-	return tk_len;
+	curr_tk.type = TK_INT;
+	return curr_tk.len;
 }
 
 size_t get_token()
@@ -612,40 +566,40 @@ size_t get_token()
 	if (match_comment())
 		skip_whitespace();
 	if (match_str())
-		return tk_len;
+		return curr_tk.len;
 	if (match_char())
-		return tk_len;
+		return curr_tk.len;
 	if (match_id())
-		return tk_len;
+		return curr_tk.len;
 	if (match_float())
-		return tk_len;
+		return curr_tk.len;
 	if (match_int())
-		return tk_len;
+		return curr_tk.len;
 	if (match_op())
-		return tk_len;
+		return curr_tk.len;
 	if (match_punct())
-		return tk_len;
+		return curr_tk.len;
 
-	return tk_len;
+	return curr_tk.len;
 }
 
 void print_token()
 {
-	switch (tk_type) {
+	switch (curr_tk.type) {
 	case TK_STR: case TK_ID:
-		printf("%2zu  <%d, %s>\n", tk_len, tk_type, tk_str_val);
+		printf("%2zu  <%d, %s>\n", curr_tk.len, curr_tk.type, curr_tk.str_val);
 		break;
 	case TK_INT: case TK_FLOAT:
-		printf("%2zu  <%d, %"PRIu64">\n", tk_len, tk_type, tk_num_val);
+		printf("%2zu  <%d, %"PRIu64">\n", curr_tk.len, curr_tk.type, curr_tk.num_val);
 		break;
 	case TK_CHAR: case TK_PUNCT:
-		printf("%2zu  <%d, %c>\n", tk_len, tk_type, (char) tk_num_val);
+		printf("%2zu  <%d, %c>\n", curr_tk.len, curr_tk.type, (char) curr_tk.num_val);
 		break;
 	case TK_OP: case TK_UN_OP: case TK_BIN_OP:
-		printf("%2zu  <%d, %d>\n", tk_len, tk_type, tk_op_val);
+		printf("%2zu  <%d, %d>\n", curr_tk.len, curr_tk.type, curr_tk.op_val);
 		break;
 	default:
-		printf("%2zu  <%d,>\n", tk_len, tk_type);
+		printf("%2zu  <%d,>\n", curr_tk.len, curr_tk.type);
 	}
 }
 
