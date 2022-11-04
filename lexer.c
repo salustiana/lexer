@@ -583,27 +583,27 @@ size_t get_token()
 	return curr_tk.len;
 }
 
-void print_token()
+void print_token(struct token tk)
 {
-	switch (curr_tk.type) {
+	switch (tk.type) {
 	case TK_STR: case TK_ID:
-		printf("%2zu  <%d, %s>\n", curr_tk.len, curr_tk.type, curr_tk.str_val);
+		printf("%2zu  <%d, %s>\n", tk.len, tk.type, tk.str_val);
 		break;
 	case TK_INT: case TK_FLOAT:
-		printf("%2zu  <%d, %"PRIu64">\n", curr_tk.len, curr_tk.type, curr_tk.num_val);
+		printf("%2zu  <%d, %"PRIu64">\n", tk.len, tk.type, tk.num_val);
 		break;
 	case TK_CHAR: case TK_PUNCT:
-		printf("%2zu  <%d, %c>\n", curr_tk.len, curr_tk.type, (char) curr_tk.num_val);
+		printf("%2zu  <%d, %c>\n", tk.len, tk.type, (char) tk.num_val);
 		break;
 	case TK_OP: case TK_UN_OP: case TK_BIN_OP:
-		printf("%2zu  <%d, %d>\n", curr_tk.len, curr_tk.type, curr_tk.op_val);
+		printf("%2zu  <%d, %d>\n", tk.len, tk.type, tk.op_val);
 		break;
 	default:
-		printf("%2zu  <%d,>\n", curr_tk.len, curr_tk.type);
+		printf("%2zu  <%d,>\n", tk.len, tk.type);
 	}
 }
 
-void scan_input(const char *infile)
+void init_lexer(const char *infile)
 {
 	if (!infile) {
 		file_name = "stdin";
@@ -616,11 +616,16 @@ void scan_input(const char *infile)
 	}
 
 	init_input_buffer();
+}
 
-	while (get_token()) {
-		print_token();
+int next_token(struct token *tk)
+{
+	if (get_token()) {
+		*tk = curr_tk;
 		skip_whitespace();
+		return 1;
 	}
 	if (CURR_CHAR != EOF)
 		panic("syntax error", "%c", CURR_CHAR);
+	return 0;
 }

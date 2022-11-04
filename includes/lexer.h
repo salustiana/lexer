@@ -57,4 +57,8 @@ struct token {
 	size_t len;
 };
 
-void scan_input(const char *infile);
+void init_lexer(const char *infile);
+
+int next_token(struct token *tk);
+
+void print_token(struct token tk);
