@@ -413,6 +413,9 @@ size_t match_str()
 		if (CURR_CHAR == '\\') {
 			ADVANCE_TK();
 			switch (CURR_CHAR) {
+				case '\\':
+					curr_tk.str_val[str_i++] = '\\';
+					break;
 				case '"':
 					curr_tk.str_val[str_i++] = '"';
 					break;
