@@ -6,7 +6,8 @@ int main(int argc, char **argv)
 {
 	if (argc == 1) {
 		init_lexer(NULL);
-		return 0;
+		while (next_token(&tk))
+			print_token(tk);
 	}
 
 	while (--argc > 0) {
