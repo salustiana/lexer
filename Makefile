@@ -1,5 +1,5 @@
 CC = gcc
-OBJS = main.c lexer.c message.c
+OBJS = main.c lexer.c
 CFLAGS = -Wall -Wextra -Wconversion -pedantic -std=c99 -g
 INCLUDES = -iquote ./includes
 #LIBS = -lGL -lglfw -ldl -lm -lmi

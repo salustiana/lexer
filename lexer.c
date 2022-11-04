@@ -1,10 +1,11 @@
 #include "lexer.h"
-#include "message.h"
 
 #include <ctype.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -62,11 +63,31 @@ void print_buf()
 	printf("^hs\n");
 }
 
+#define ASCII_BOLD	"\033[1m"
+#define ASCII_RED	"\033[31m"
+#define ASCII_NORMAL	"\033[m"
+
+/* report error and halt */
+void panic(const char *fmt_msg, ...)
+{
+	fprintf(stderr, ASCII_BOLD"%s:%zu:%zu: "ASCII_RED"error: "
+		ASCII_NORMAL, file_name, line, line_char);
+
+	va_list args;
+	va_start(args, fmt_msg);
+	vfprintf(stderr, fmt_msg, args);
+	va_end(args);
+
+	fprintf(stderr, "\n\t"ASCII_BOLD"%zu |"ASCII_NORMAL" %c\n",
+		line_char, CURR_CHAR);
+	exit(1);
+}
+
 void init_input_buffer()
 {
 	rb = read(file_desc, buf, HALFBUF);
 	if (rb < 0)
-		panic('\0', "error reading file");
+		panic("error reading file");
 	hist_start = (size_t) rb;
 }
 
@@ -91,7 +112,7 @@ void next_char()
 			rb = read(file_desc, buf+buf_i, HALFBUF);
 
 		if (rb < 0)
-			panic('\0', "error reading file");
+			panic("error reading file");
 		if (rb == 0) {
 			buf[buf_i] = EOF;
 			++rb;
@@ -105,7 +126,7 @@ void next_char()
 void unread_char()
 {
 	if (buf_i == hist_start)
-		panic(CURR_CHAR, "cannot further unread input: "
+		panic("cannot further unread input: "
 			"no more history left in buffer");
 
 	--buf_i;
@@ -113,7 +134,7 @@ void unread_char()
 
 	if (CURR_CHAR == '\n') {
 		if (!can_unread_line)
-			panic(CURR_CHAR, "cannot unread newline without "
+			panic("cannot unread newline without "
 				"losing line_char info");
 		--line;
 		line_char = last_line_char;
@@ -612,7 +633,7 @@ void init_lexer(const char *infile)
 	else {
 		file_name = infile;
 		if ((file_desc = open(file_name, O_RDONLY)) == -1)
-			panic('\0', "could not open file");
+			panic("could not open file");
 	}
 
 	init_input_buffer();
@@ -626,6 +647,6 @@ int next_token(struct token *tk)
 		return 1;
 	}
 	if (CURR_CHAR != EOF)
-		panic(CURR_CHAR, "syntax error");
+		panic("syntax error");
 	return 0;
 }
