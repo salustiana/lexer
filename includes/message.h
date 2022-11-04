@@ -1,2 +1,2 @@
 /* report error and halt */
-void panic(const char *msg, const char *fmt_ctx, ...);
+void panic(char curr_char, const char *fmt_msg, ...);

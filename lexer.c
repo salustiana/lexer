@@ -66,7 +66,7 @@ void init_input_buffer()
 {
 	rb = read(file_desc, buf, HALFBUF);
 	if (rb < 0)
-		panic("error reading file", NULL);
+		panic('\0', "error reading file");
 	hist_start = (size_t) rb;
 }
 
@@ -91,7 +91,7 @@ void next_char()
 			rb = read(file_desc, buf+buf_i, HALFBUF);
 
 		if (rb < 0)
-			panic("error reading file", NULL);
+			panic('\0', "error reading file");
 		if (rb == 0) {
 			buf[buf_i] = EOF;
 			++rb;
@@ -105,16 +105,16 @@ void next_char()
 void unread_char()
 {
 	if (buf_i == hist_start)
-		panic("cannot further unread input: "
-			"no more history left in buffer", NULL);
+		panic(CURR_CHAR, "cannot further unread input: "
+			"no more history left in buffer");
 
 	--buf_i;
 	buf_i %= BUFLEN;
 
 	if (CURR_CHAR == '\n') {
 		if (!can_unread_line)
-			panic("cannot unread newline without "
-				"losing line_char info", NULL);
+			panic(CURR_CHAR, "cannot unread newline without "
+				"losing line_char info");
 		--line;
 		line_char = last_line_char;
 		can_unread_line = 0;
@@ -612,7 +612,7 @@ void init_lexer(const char *infile)
 	else {
 		file_name = infile;
 		if ((file_desc = open(file_name, O_RDONLY)) == -1)
-			panic("could not open file", NULL);
+			panic('\0', "could not open file");
 	}
 
 	init_input_buffer();
@@ -626,6 +626,6 @@ int next_token(struct token *tk)
 		return 1;
 	}
 	if (CURR_CHAR != EOF)
-		panic("syntax error", "%c", CURR_CHAR);
+		panic(CURR_CHAR, "syntax error");
 	return 0;
 }

@@ -12,17 +12,19 @@ extern char *file_name;
 extern size_t line, line_char;
 
 /* report error and halt */
-void panic(const char *msg, const char *fmt_ctx, ...)
+void panic(char curr_char, const char *fmt_msg, ...)
 {
 	fprintf(stderr, ASCII_BOLD"%s:%zu:%zu: "ASCII_RED"error: "
-		ASCII_NORMAL"%s\n\t%zu | ",
-		file_name, line, line_char, msg, line_char);
+		ASCII_NORMAL, file_name, line, line_char);
 
 	va_list args;
-	va_start(args, fmt_ctx);
-	vfprintf(stderr, fmt_ctx, args);
+	va_start(args, fmt_msg);
+	vfprintf(stderr, fmt_msg, args);
 	va_end(args);
 
+	if (curr_char)
+		fprintf(stderr, "\n\t"ASCII_BOLD"%zu |"ASCII_NORMAL" %c",
+			line_char, curr_char);
 	fprintf(stderr, "\n");
 	exit(1);
 }
