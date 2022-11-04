@@ -57,6 +57,9 @@ struct token {
 	size_t len;
 };
 
+/* report error and halt */
+void panic(const char *fmt_msg, ...);
+
 void init_lexer(const char *infile);
 
 int next_token(struct token *tk);
