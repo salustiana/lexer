@@ -40,7 +40,7 @@ enum tk_type {
 	/* keywords */
 	TK_IF,		TK_ELSE,	TK_LOOP,
 	TK_BRK,		TK_CONT,
-	/*
+	/* TODO:
 	 * keywords will be scanned as identifiers,
 	 * and then categorized using a lookup table
 	 * (preferably with perfect hashing)
