@@ -8,16 +8,16 @@ extern size_t line_char;
 extern const char *file_name;
 
 enum tk_type {
-	TK_INT,		TK_FLOAT,	TK_CHAR,
-	TK_STR,		TK_ID,		TK_PUNCT,
-	TK_OP,		TK_UN_OP,	TK_BIN_OP,
-};
+	/* punctuators */
+	TK_SMCOL = ';',	TK_COMMA = ',',	TK_LBRCK = '[',
+	TK_RBRCK = ']',	TK_LPAR = '(',	TK_RPAR = ')',
+	TK_LBRCE = '{',	TK_RBRCE = '}',
 
-enum tk_op_val {
-	OP_ASTK = '*',	OP_PRCT = '%',	OP_AMP = '&',
-	OP_PLUS = '+',	OP_MINUS = '-',	OP_DIV = '/',
-	OP_GRT = '>',	OP_LESS = '<',	OP_ASSIGN = '=',
-	OP_NOT = '!',	OP_BXOR = '^',	OP_CMPL = '~',
+	/* operators */
+	TK_ASTK = '*',	TK_PRCT = '%',	TK_AMP = '&',
+	TK_PLUS = '+',	TK_MINUS = '-',	TK_DIV = '/',
+	TK_GRT = '>',	TK_LESS = '<',	TK_ASSIGN = '=',
+	TK_NOT = '!',	TK_BXOR = '^',	TK_CMPL = '~',
 	/*
 	 * it is important for '~' to be the last
 	 * specified enum value, since it is the
@@ -25,34 +25,34 @@ enum tk_op_val {
 	 * the subsequent enum members would
 	 * overlap with the previous ones.
 	 */
-	OP_EQ,		OP_NEQ,		OP_GREQ,
-	OP_LEQ,		OP_AND,		OP_OR,
-	OP_INC,		OP_DEC,		OP_LSHFT,
-	OP_RSHFT, 	OP_AINC, 	OP_ADEC,
-	OP_AMUL,	OP_ADIV,	OP_AREM,
-	OP_ALSHFT,	OP_ARSHFT,	OP_ABAND,
-	OP_ABXOR,
-};
+	TK_EQ,		TK_NEQ,		TK_GREQ,
+	TK_LEQ,		TK_AND,		TK_OR,
+	TK_INC,		TK_DEC,		TK_LSHFT,
+	TK_RSHFT, 	TK_AINC, 	TK_ADEC,
+	TK_AMUL,	TK_ADIV,	TK_AREM,
+	TK_ALSHFT,	TK_ARSHFT,	TK_ABAND,
+	TK_ABXOR,
 
-/*
- * KEYWORDS
- *
- *	control-flow
- *		TK_IF, TK_ELSE, TK_LOOP,
- *		TK_BRK, TK_CONT,
- *	types
- *		TK_INT_T, TK_UINT_T,
- *		TK_FLOAT_T,
- *
- * keywords will be scanned as identifiers,
- * and then categorized using a lookup table
- * (preferably with perfect hashing)
- */
+	/* literals */
+	TK_INT,		TK_FLOAT,	TK_CHAR,
+	TK_STR,		TK_ID,
+
+	/* keywords */
+	TK_IF,		TK_ELSE,	TK_LOOP,
+	TK_BRK,		TK_CONT,
+	/*
+	 * keywords will be scanned as identifiers,
+	 * and then categorized using a lookup table
+	 * (preferably with perfect hashing)
+	 */
+
+	/* types */
+	TK_INT_T,	TK_UINT_T,	TK_FLOAT_T,
+};
 
 struct token {
 	enum tk_type type;
 	uint64_t num_val;
-	enum tk_op_val op_val;
 	char str_val[TKSTRLEN];
 	size_t len;
 };

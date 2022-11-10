@@ -16,15 +16,6 @@
 #define CURR_CHAR	(buf[buf_i])
 #define ADVANCE_TK()	next_char(), ++curr_tk.len
 
-#define RET_OP_TK(OP_TYPE, OP_VAL)	\
-do {					\
-	curr_tk.type = (OP_TYPE);	\
-	curr_tk.op_val = (OP_VAL);	\
-	ADVANCE_TK();			\
-	return curr_tk.len;		\
-} while (0)
-/* the do {} while (0) prevents semicolon pitfalls */
-
 signed char buf[BUFLEN];
 ssize_t rb;
 size_t buf_i, hist_start;
@@ -183,8 +174,11 @@ size_t match_op()
 		ADVANCE_TK();
 		if (CURR_CHAR == '>') {
 			ADVANCE_TK();
-			if (CURR_CHAR == '=')
-				RET_OP_TK(TK_BIN_OP, OP_ARSHFT);
+			if (CURR_CHAR == '=') {
+				curr_tk.type = TK_ARSHFT;
+				ADVANCE_TK();
+				return curr_tk.len;
+			}
 			else
 				roll_back();
 		}
@@ -195,8 +189,11 @@ size_t match_op()
 		ADVANCE_TK();
 		if (CURR_CHAR == '<') {
 			ADVANCE_TK();
-			if (CURR_CHAR == '=')
-				RET_OP_TK(TK_BIN_OP, OP_ALSHFT);
+			if (CURR_CHAR == '=') {
+				curr_tk.type = TK_ALSHFT;
+				ADVANCE_TK();
+				return curr_tk.len;
+			}
 			else
 				roll_back();
 		}
@@ -207,108 +204,158 @@ size_t match_op()
 	/* TWO CHAR */
 	if (CURR_CHAR == '=') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_EQ);
+		if (CURR_CHAR == '=') {
+			curr_tk.type = TK_EQ;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '!') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_NEQ);
+		if (CURR_CHAR == '=') {
+			curr_tk.type = TK_NEQ;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '>') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_GREQ);
-		else if (CURR_CHAR == '>')
-			RET_OP_TK(TK_UN_OP, OP_RSHFT);
+		if (CURR_CHAR == '=') {
+			curr_tk.type = TK_GREQ;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
+		else if (CURR_CHAR == '>') {
+			curr_tk.type = TK_RSHFT;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '<') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_LEQ);
-		else if (CURR_CHAR == '<')
-			RET_OP_TK(TK_UN_OP, OP_LSHFT);
+		if (CURR_CHAR == '=') {
+			curr_tk.type = TK_LEQ;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
+		else if (CURR_CHAR == '<') {
+			curr_tk.type = TK_LSHFT;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '&') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '&')
-			RET_OP_TK(TK_BIN_OP, OP_AND);
-		else if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_ABAND);
+		if (CURR_CHAR == '&') {
+			curr_tk.type = TK_AND;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
+		else if (CURR_CHAR == '=') {
+			curr_tk.type = TK_ABAND;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '|') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '|')
-			RET_OP_TK(TK_BIN_OP, OP_OR);
+		if (CURR_CHAR == '|') {
+			curr_tk.type = TK_OR;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '+') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '+')
-			RET_OP_TK(TK_UN_OP, OP_INC);
-		else if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_AINC);
+		if (CURR_CHAR == '+') {
+			curr_tk.type = TK_INC;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
+		else if (CURR_CHAR == '=') {
+			curr_tk.type = TK_AINC;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '-') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '-')
-			RET_OP_TK(TK_UN_OP, OP_DEC);
-		else if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_ADEC);
+		if (CURR_CHAR == '-') {
+			curr_tk.type = TK_DEC;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
+		else if (CURR_CHAR == '=') {
+			curr_tk.type = TK_ADEC;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '*') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_AMUL);
+		if (CURR_CHAR == '=') {
+			curr_tk.type = TK_AMUL;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '/') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_ADIV);
+		if (CURR_CHAR == '=') {
+			curr_tk.type = TK_ADIV;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '%') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_AREM);
+		if (CURR_CHAR == '=') {
+			curr_tk.type = TK_AREM;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 	if (CURR_CHAR == '^') {
 		ADVANCE_TK();
-		if (CURR_CHAR == '=')
-			RET_OP_TK(TK_BIN_OP, OP_ABXOR);
+		if (CURR_CHAR == '=') {
+			curr_tk.type = TK_ABXOR;
+			ADVANCE_TK();
+			return curr_tk.len;
+		}
 		else
 			roll_back();
 	}
 
 	/* SINGLE CHAR */
 	switch (CURR_CHAR) {
-		case '*': case '%': case '&':
-			RET_OP_TK(TK_OP, (enum tk_op_val) CURR_CHAR);
-		case '!': case '~':
-			RET_OP_TK(TK_UN_OP, (enum tk_op_val) CURR_CHAR);
-		case '+': case '-': case '/':
+		case '*': case '%': case '&': case '!':
+		case '~': case '+': case '-': case '/':
 		case '>': case '<': case '^': case '=':
-			RET_OP_TK(TK_BIN_OP, (enum tk_op_val) CURR_CHAR);
+			curr_tk.type = (enum tk_type) CURR_CHAR;
+			ADVANCE_TK();
+			return curr_tk.len;
 		default:
 			return curr_tk.len;	/* curr_tk.len == 0 */
 	}
@@ -325,10 +372,8 @@ size_t match_punct()
 	switch (CURR_CHAR) {
 		case '[': case ']': case '(': case ')':
 		case '{': case '}': case ',': case ';':
-			curr_tk.num_val = (uint64_t) CURR_CHAR;
-
+			curr_tk.type = (enum tk_type) CURR_CHAR;
 			ADVANCE_TK();
-			curr_tk.type = TK_PUNCT;
 			return curr_tk.len;
 
 		default:
@@ -630,14 +675,8 @@ void print_token(struct token tk)
 	case TK_INT: case TK_FLOAT:
 		printf("%2zu  <%d, %"PRIu64">\n", tk.len, tk.type, tk.num_val);
 		break;
-	case TK_CHAR: case TK_PUNCT:
-		printf("%2zu  <%d, %c>\n", tk.len, tk.type, (char) tk.num_val);
-		break;
-	case TK_OP: case TK_UN_OP: case TK_BIN_OP:
-		printf("%2zu  <%d, %d>\n", tk.len, tk.type, tk.op_val);
-		break;
 	default:
-		printf("%2zu  <%d,>\n", tk.len, tk.type);
+		printf("%2zu  <%d, %c>\n", tk.len, tk.type, (char) tk.type);
 	}
 }
 
