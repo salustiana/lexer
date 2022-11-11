@@ -704,7 +704,7 @@ void print_token(struct token tk)
 		printf("%d\t%"PRIu64"\n", tk.type, tk.num_val);
 		return;
 	default:
-		printf("%d\n", tk.type);
+		printf("%d\t\n", tk.type);
 	}
 }
 
