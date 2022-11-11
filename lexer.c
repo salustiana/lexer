@@ -705,6 +705,5 @@ int next_token(struct token *tk)
 	}
 	if (CURR_CHAR != EOF)
 		panic("syntax error");
-	tk->type = TK_EOF;
 	return 0;
 }
