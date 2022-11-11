@@ -11,7 +11,7 @@ enum tk_type {
 	/* punctuators */
 	TK_SMCOL = ';',	TK_COMMA = ',',	TK_LBRCK = '[',
 	TK_RBRCK = ']',	TK_LPAR = '(',	TK_RPAR = ')',
-	TK_LBRCE = '{',	TK_RBRCE = '}',
+	TK_LBRCE = '{',	TK_RBRCE = '}', TK_COLN = ':',
 
 	/* operators */
 	TK_ASTK = '*',	TK_PRCT = '%',	TK_AMP = '&',

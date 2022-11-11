@@ -370,8 +370,9 @@ size_t match_punct()
 	curr_tk.len = 0;
 
 	switch (CURR_CHAR) {
-		case '[': case ']': case '(': case ')':
-		case '{': case '}': case ',': case ';':
+		case '[': case ']': case '(':
+		case ')': case '{': case '}':
+		case ',': case ';': case ':':
 			curr_tk.type = (enum tk_type) CURR_CHAR;
 			ADVANCE_TK();
 			return curr_tk.len;
