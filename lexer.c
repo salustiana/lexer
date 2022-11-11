@@ -671,13 +671,13 @@ void print_token(struct token tk)
 {
 	switch (tk.type) {
 	case TK_STR: case TK_ID:
-		printf("%2zu  <%d, %s>\n", tk.len, tk.type, tk.str_val);
+		printf("%d\t%s\n", tk.type, tk.str_val);
 		break;
 	case TK_INT: case TK_FLOAT:
-		printf("%2zu  <%d, %"PRIu64">\n", tk.len, tk.type, tk.num_val);
+		printf("%d\t%"PRIu64"\n", tk.type, tk.num_val);
 		break;
 	default:
-		printf("%2zu  <%d, %c>\n", tk.len, tk.type, (char) tk.type);
+		printf("%d\t%c\n", tk.type, (char) tk.type);
 	}
 }
 
