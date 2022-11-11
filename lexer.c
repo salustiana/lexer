@@ -673,11 +673,8 @@ void print_token(struct token tk)
 	case TK_STR: case TK_ID:
 		printf("%d\t%s\n", tk.type, tk.str_val);
 		break;
-	case TK_INT: case TK_FLOAT:
-		printf("%d\t%"PRIu64"\n", tk.type, tk.num_val);
-		break;
 	default:
-		printf("%d\t%c\n", tk.type, (char) tk.type);
+		printf("%d\t%"PRIu64"\n", tk.type, tk.num_val);
 	}
 }
 
