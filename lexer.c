@@ -670,14 +670,41 @@ size_t get_token()
 void print_token(struct token tk)
 {
 	switch (tk.type) {
-	case TK_STR: case TK_ID:
+	case TK_ID:
 		printf("%d\t%s\n", tk.type, tk.str_val);
-		break;
+		return;
+	case TK_STR:
+		printf("%d\t\"", tk.type);
+		if (*tk.str_val == '\0') {
+			printf("\"\n");
+			return;
+		}
+		char *s = tk.str_val;
+		do {
+			switch (*s) {
+				case '\\':
+					printf("\\\\");
+					break;
+				case '"':
+					printf("\\\"");
+					break;
+				case '\n':
+					printf("\\n");
+					break;
+				case '\t':
+					printf("\\t");
+					break;
+				default:
+					printf("%c", *s);
+			}
+		} while (*++s);
+		printf("\"\n");
+		return;
 	case TK_INT: case TK_FLOAT:
 		printf("%d\t%"PRIu64"\n", tk.type, tk.num_val);
-		break;
+		return;
 	default:
-		printf("%d\t%c\n", tk.type, (char) tk.type);
+		printf("%d\n", tk.type);
 	}
 }
 
