@@ -1,3 +1,6 @@
+#ifndef LEXER_H
+#define LEXER_H
+
 #include <inttypes.h>
 #include <stddef.h>
 
@@ -66,3 +69,5 @@ void init_lexer(const char *infile);
 int next_token(struct token *tk);
 
 void print_token(struct token tk);
+
+#endif
