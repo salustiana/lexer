@@ -363,7 +363,7 @@ size_t match_op()
 
 /*
  * scans for a punctuator
- * punctuator: \[ | \] | \( | \) | \{ | \} | , | ;
+ * punctuator: \[ | \] | \( | \) | \{ | \} | ` | , | ;
  */
 size_t match_punct()
 {
@@ -371,7 +371,7 @@ size_t match_punct()
 
 	switch (CURR_CHAR) {
 		case '[': case ']': case '(':
-		case ')': case '{': case '}':
+		case ')': case '{': case '}': case '`':
 		case ',': case '|': case ':': case ';':
 			curr_tk.type = (enum tk_type) CURR_CHAR;
 			ADVANCE_TK();

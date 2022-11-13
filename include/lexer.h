@@ -15,7 +15,7 @@ enum tk_type {
 	TK_SMCOL = ';',	TK_COMMA = ',',	TK_LBRCK = '[',
 	TK_RBRCK = ']',	TK_LPAR = '(',	TK_RPAR = ')',
 	TK_LBRCE = '{',	TK_RBRCE = '}',	TK_BAR = '|',
-	TK_COLN = ':',
+	TK_COLN = ':',	TK_BACTK = '`',
 
 	/* operators */
 	TK_ASTK = '*',	TK_PRCT = '%',	TK_AMP = '&',

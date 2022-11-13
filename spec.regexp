@@ -17,6 +17,7 @@ PUNCTUATORS
 		lbrace:		\{
 		rbrace:		\}
 		bar:		\|
+		bactk:		`
 		comma:		,
 		coln:		:
 		semicol:	;
