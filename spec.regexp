@@ -24,8 +24,7 @@ PUNCTUATORS
 
 KEYWORDS
 	control-flow
-		if:		if
-		else:		else
+		splt:		split
 		loop:		loop
 		brk:		break
 		cont:		continue
