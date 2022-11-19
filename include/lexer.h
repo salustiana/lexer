@@ -52,6 +52,8 @@ enum tk_type {
 
 	/* types */
 	TK_INT_T,	TK_UINT_T,	TK_FLOAT_T,
+
+	TK_TYPE_COUNT
 };
 
 struct token {
