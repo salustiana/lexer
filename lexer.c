@@ -90,6 +90,7 @@ void panic(const char *fmt_msg, ...)
 
 void init_input_buffer()
 {
+	buf_i = 0;
 	rb = read(file_desc, buf, HALFBUF);
 	if (rb < 0)
 		panic("error reading file");
@@ -732,5 +733,7 @@ int next_token(struct token *tk)
 	}
 	if (CURR_CHAR != EOF)
 		panic("syntax error");
+
+	close(file_desc);
 	return 0;
 }
